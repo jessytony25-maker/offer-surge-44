@@ -14,7 +14,7 @@ const TONE: Record<string, string> = {
 };
 
 export function OfferCard({ offer }: { offer: DemoOffer }) {
-  const tone = TONE[scoreTone(offer.score)] ?? TONE.low;
+  const tone = TONE[scoreTone(offer.score)] ?? TONE["low"];
 
   async function copyMessage() {
     const text = generateCopy(

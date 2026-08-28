@@ -59,7 +59,7 @@ function Integracoes() {
           <Card
             key={a.slug}
             name={a.name}
-            description={a.description}
+            description={a.program}
             status="Aguardando configuração"
             onConnect={() => notify(a.name)}
           />
@@ -68,15 +68,17 @@ function Integracoes() {
 
       <h2 className="mt-6 text-sm font-semibold text-foreground">Canais de publicação</h2>
       <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {Object.values(CHANNEL_CONNECTORS).map((c) => (
-          <Card
-            key={c.slug}
-            name={c.name}
-            description={c.description}
-            status="Aguardando configuração"
-            onConnect={() => notify(c.name)}
-          />
-        ))}
+        {Object.values(CHANNEL_CONNECTORS)
+          .filter((c) => c.platform !== "other")
+          .map((c) => (
+            <Card
+              key={c.platform}
+              name={c.name}
+              description={`${c.transport} — ${c.policyNote}`}
+              status="Aguardando configuração"
+              onConnect={() => notify(c.name)}
+            />
+          ))}
       </div>
     </AppShell>
   );
