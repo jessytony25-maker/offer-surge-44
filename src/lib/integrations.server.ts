@@ -11,6 +11,7 @@ export interface FieldDef {
   key: string;
   label: string;
   secret?: boolean;
+  required?: boolean;
   help?: string;
 }
 
