@@ -114,7 +114,7 @@ function IntegrationCard({
   onDisconnect: () => void;
 }) {
   const status = row?.status ?? "not_configured";
-  const missing = fields.filter((f) => !row?.filledKeys?.includes(f.key));
+  const missing = fields.filter((f) => f.required && !row?.filledKeys?.includes(f.key));
   return (
     <div className="flex flex-col rounded-xl border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
