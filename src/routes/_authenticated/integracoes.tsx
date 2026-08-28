@@ -41,7 +41,26 @@ export const Route = createFileRoute("/_authenticated/integracoes")({
 
 type Kind = "marketplace" | "channel";
 
-type Field = { key: string; label: string; secret?: boolean; help?: string };
+type Field = {
+  key: string;
+  label: string;
+  secret?: boolean;
+  required?: boolean;
+  help?: string;
+};
+
+/** Extrai matt_word / matt_tool de um link de afiliado do Mercado Livre. */
+function extractMeliCredentials(raw: string): { matt_word?: string; matt_tool?: string } | null {
+  try {
+    const url = new URL(raw.trim());
+    const word = url.searchParams.get("matt_word") ?? undefined;
+    const tool = url.searchParams.get("matt_tool") ?? undefined;
+    if (!word && !tool) return null;
+    return { ...(word ? { matt_word: word } : {}), ...(tool ? { matt_tool: tool } : {}) };
+  } catch {
+    return null;
+  }
+}
 
 type StatusRow = {
   provider: string;
