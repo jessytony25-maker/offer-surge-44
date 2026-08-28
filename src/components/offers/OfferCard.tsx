@@ -17,16 +17,20 @@ export function OfferCard({ offer }: { offer: DemoOffer }) {
   const tone = TONE[scoreTone(offer.score)] ?? TONE.low;
 
   async function copyMessage() {
-    const text = generateCopy({
-      titulo: offer.title,
-      preco: offer.price,
-      precoAntigo: offer.previousPrice,
-      desconto: offer.discountPct,
-      cupom: offer.coupon,
-      link: offer.affiliateUrl ?? offer.originalUrl,
-      loja: offer.marketplace,
-      freteGratis: offer.freeShipping,
-    });
+    const text = generateCopy(
+      {
+        title: offer.title,
+        marketplace: offer.marketplace,
+        price: offer.price,
+        previousPrice: offer.previousPrice,
+        discountPct: offer.discountPct,
+        rating: offer.rating,
+        salesCount: offer.salesCount,
+        coupon: offer.coupon,
+        link: offer.affiliateUrl ?? offer.originalUrl,
+      },
+      { style: "promocional", length: "medio", emojis: true, detail: 4 },
+    );
     try {
       await navigator.clipboard.writeText(text);
       toast.success("Copy copiada para a área de transferência");
