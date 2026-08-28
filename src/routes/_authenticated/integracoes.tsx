@@ -88,9 +88,9 @@ function IntegrationCard({
 }: {
   name: string;
   description: string;
-  row?: StatusRow;
+  row?: StatusRow | undefined;
   fields: Field[];
-  docsUrl?: string;
+  docsUrl?: string | undefined;
   onConfigure: () => void;
   onDisconnect: () => void;
 }) {
