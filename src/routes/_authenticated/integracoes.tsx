@@ -267,6 +267,42 @@ function Integracoes() {
             </DialogDescription>
           </DialogHeader>
 
+          {target?.provider === "mercadolivre" && (
+            <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+              <p className="text-[11px] text-muted-foreground">
+                Cole aqui um link de afiliado que você gerou no Mercado Livre que o sistema extrai a
+                Etiqueta e o ID da Ferramenta automaticamente.
+              </p>
+              <Input
+                placeholder="Link completo de divulgação (…?matt_word=…&matt_tool=…)"
+                value={meliLink}
+                onChange={(e) => setMeliLink(e.target.value)}
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                className="w-full"
+                onClick={() => {
+                  const parsed = extractMeliCredentials(meliLink);
+                  if (!parsed) {
+                    toast.error(
+                      "Não encontrei matt_word/matt_tool nesse link. Links curtos (meli.la) precisam ser abertos antes — use o link completo de divulgação.",
+                    );
+                    return;
+                  }
+                  setValues((prev) => ({
+                    ...prev,
+                    ...(parsed.matt_word ? { affiliate_id: parsed.matt_word } : {}),
+                    ...(parsed.matt_tool ? { tracking_id: parsed.matt_tool } : {}),
+                  }));
+                  toast.success("Credenciais extraídas do link. Confira e salve.");
+                }}
+              >
+                Extrair credenciais do link
+              </Button>
+            </div>
+          )}
+
           <div className="space-y-3">
             {target?.fields.map((field) => (
               <div key={field.key} className="space-y-1">
