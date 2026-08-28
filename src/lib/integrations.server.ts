@@ -61,7 +61,6 @@ export function filledKeys(
 export type TestOutcome = {
   status: "connected" | "pending" | "error";
   message: string;
-  meta?: Record<string, unknown>;
 };
 
 async function testTelegram(creds: Record<string, string>): Promise<TestOutcome> {
@@ -83,7 +82,6 @@ async function testTelegram(creds: Record<string, string>): Promise<TestOutcome>
           status: "error",
           message:
             "Bot válido, mas não consegui acessar o chat informado. Adicione o bot como administrador do grupo/canal.",
-          meta: { bot: me.result?.username },
         };
       }
       chatTitle = chat.result?.title ?? chat.result?.username;
@@ -93,7 +91,6 @@ async function testTelegram(creds: Record<string, string>): Promise<TestOutcome>
       message: chatTitle
         ? `Conectado como @${me.result?.username} — destino: ${chatTitle}`
         : `Conectado como @${me.result?.username}`,
-      meta: { bot: me.result?.username, chat_title: chatTitle },
     };
   } catch {
     return { status: "error", message: "Falha ao contatar a API do Telegram." };
@@ -119,7 +116,6 @@ async function testWhatsApp(creds: Record<string, string>): Promise<TestOutcome>
     return {
       status: "connected",
       message: `Conectado: ${String(json["verified_name"] ?? "")} (${String(json["display_phone_number"] ?? "")}). Lembrando: a API oficial não envia para grupos.`,
-      meta: json,
     };
   } catch {
     return { status: "error", message: "Falha ao contatar a API da Meta." };

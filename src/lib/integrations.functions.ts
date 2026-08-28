@@ -32,7 +32,7 @@ export const listIntegrations = createServerFn({ method: "GET" })
         .select("marketplace, status, last_error, last_sync_at"),
       context.supabase
         .from("channel_connections")
-        .select("platform, status, last_error, last_test_at, meta"),
+        .select("platform, status, last_error, last_test_at"),
     ]);
 
     const keysFor = (kind: IntegrationKind, provider: string) => {
@@ -53,7 +53,6 @@ export const listIntegrations = createServerFn({ method: "GET" })
         status: c.status,
         lastError: c.last_error,
         lastEventAt: c.last_test_at,
-        meta: c.meta as Record<string, unknown>,
         filledKeys: keysFor("channel", c.platform as string),
       })),
     };
@@ -113,7 +112,11 @@ export const saveIntegration = createServerFn({ method: "POST" })
       );
     }
 
-    return { ...result, filledKeys: filledKeys(kind, data.provider, merged) };
+    return {
+      status: result.status,
+      message: result.message,
+      filledKeys: filledKeys(kind, data.provider, merged),
+    };
   });
 
 export const disconnectIntegration = createServerFn({ method: "POST" })
