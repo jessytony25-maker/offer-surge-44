@@ -134,15 +134,25 @@ export async function runTest(
     return { status: "pending", message: "Canal sem verificação automática." };
   }
 
-  const missing = fieldsFor(kind, provider)
-    .filter((f) => !creds[f.key])
+  const fields = fieldsFor(kind, provider);
+  const missing = fields
+    .filter((f) => f.required && !creds[f.key])
     .map((f) => f.label);
   if (missing.length) {
     return { status: "error", message: `Faltam credenciais: ${missing.join(", ")}.` };
   }
+
+  const hasApi = Boolean(creds["api_key"] && creds["api_secret"]);
+  if (!hasApi) {
+    return {
+      status: "connected",
+      message:
+        "Credenciais salvas. Já dá para gerar links de afiliado; a captura automática via API entra em ação quando você preencher as credenciais opcionais da API.",
+    };
+  }
   return {
     status: "pending",
     message:
-      "Credenciais salvas. A verificação automática deste marketplace depende da aprovação do programa de afiliados; a captura entra em fila assim que a API oficial responder.",
+      "Credenciais salvas. A verificação automática depende da aprovação do programa de afiliados; a captura entra em fila assim que a API oficial responder.",
   };
 }
