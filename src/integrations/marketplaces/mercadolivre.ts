@@ -14,10 +14,20 @@ export const mercadoLivreAdapter: MarketplaceAdapter = {
   program: "Mercado Livre Developers + Programa de Afiliados",
   docsUrl: "https://developers.mercadolivre.com.br/",
   credentialFields: [
-    { key: "affiliate_id", label: "ID de afiliado", required: true },
-    { key: "api_key", label: "Client ID", required: true },
-    { key: "api_secret", label: "Client Secret", secret: true, required: true },
-    { key: "tracking_id", label: "Tracking ID" },
+    {
+      key: "affiliate_id",
+      label: "Etiqueta (matt_word)",
+      required: true,
+      help: "Preenchida automaticamente a partir do link de afiliado para evitar erros de digitação.",
+    },
+    {
+      key: "tracking_id",
+      label: "ID da Ferramenta (matt_tool)",
+      required: true,
+      help: "Também extraído do link de afiliado que você gerou no Mercado Livre.",
+    },
+    { key: "api_key", label: "Client ID (opcional)" },
+    { key: "api_secret", label: "Client Secret (opcional)", secret: true },
   ],
   capabilities: {
     searchProducts: true,
