@@ -96,7 +96,6 @@ export const saveIntegration = createServerFn({ method: "POST" })
           status: result.status,
           last_error: result.status === "error" ? result.message : null,
           last_test_at: new Date().toISOString(),
-          meta: (result.meta ?? {}) as never,
         },
         { onConflict: "user_id,platform" },
       );
