@@ -208,6 +208,7 @@ function Integracoes() {
   const openDialog = (kind: Kind, provider: string, name: string, fields: Field[]) => {
     const row = kind === "marketplace" ? marketplaceRows.get(provider) : channelRows.get(provider);
     setValues({});
+    setMeliLink("");
     setTarget({ kind, provider, name, fields, filled: row?.filledKeys ?? [] });
   };
 
