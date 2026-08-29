@@ -8,7 +8,7 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  Menu,
+  Menu, ListChecks,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +22,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/ofertas", label: "Ofertas", icon: Tag },
   { to: "/grupos", label: "Grupos", icon: Users },
+  { to: "/fila", label: "Fila", icon: ListChecks },
   { to: "/automacoes", label: "Automações", icon: Zap },
   { to: "/integracoes", label: "Integrações", icon: Plug },
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
