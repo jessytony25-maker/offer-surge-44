@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAutomacoesRouteImport } from './routes/_authenticated/automacoes'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedFilaRouteImport } from './routes/_authenticated/fila'
 import { Route as AuthenticatedGruposRouteImport } from './routes/_authenticated/grupos'
 import { Route as AuthenticatedIntegracoesRouteImport } from './routes/_authenticated/integracoes'
 import { Route as AuthenticatedOfertasRouteImport } from './routes/_authenticated/ofertas'
@@ -50,6 +51,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedFilaRoute = AuthenticatedFilaRouteImport.update({
+  id: '/fila',
+  path: '/fila',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedGruposRoute = AuthenticatedGruposRouteImport.update({
   id: '/grupos',
   path: '/grupos',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/automacoes': typeof AuthenticatedAutomacoesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/fila': typeof AuthenticatedFilaRoute
   '/grupos': typeof AuthenticatedGruposRoute
   '/integracoes': typeof AuthenticatedIntegracoesRoute
   '/ofertas': typeof AuthenticatedOfertasRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/automacoes': typeof AuthenticatedAutomacoesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/fila': typeof AuthenticatedFilaRoute
   '/grupos': typeof AuthenticatedGruposRoute
   '/integracoes': typeof AuthenticatedIntegracoesRoute
   '/ofertas': typeof AuthenticatedOfertasRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/_authenticated/automacoes': typeof AuthenticatedAutomacoesRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/fila': typeof AuthenticatedFilaRoute
   '/_authenticated/grupos': typeof AuthenticatedGruposRoute
   '/_authenticated/integracoes': typeof AuthenticatedIntegracoesRoute
   '/_authenticated/ofertas': typeof AuthenticatedOfertasRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/automacoes'
     | '/configuracoes'
     | '/dashboard'
+    | '/fila'
     | '/grupos'
     | '/integracoes'
     | '/ofertas'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/automacoes'
     | '/configuracoes'
     | '/dashboard'
+    | '/fila'
     | '/grupos'
     | '/integracoes'
     | '/ofertas'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/_authenticated/automacoes'
     | '/_authenticated/configuracoes'
     | '/_authenticated/dashboard'
+    | '/_authenticated/fila'
     | '/_authenticated/grupos'
     | '/_authenticated/integracoes'
     | '/_authenticated/ofertas'
@@ -194,6 +206,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/fila': {
+      id: '/_authenticated/fila'
+      path: '/fila'
+      fullPath: '/fila'
+      preLoaderRoute: typeof AuthenticatedFilaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/grupos': {
       id: '/_authenticated/grupos'
       path: '/grupos'
@@ -229,6 +248,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAutomacoesRoute: typeof AuthenticatedAutomacoesRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedFilaRoute: typeof AuthenticatedFilaRoute
   AuthenticatedGruposRoute: typeof AuthenticatedGruposRoute
   AuthenticatedIntegracoesRoute: typeof AuthenticatedIntegracoesRoute
   AuthenticatedOfertasRoute: typeof AuthenticatedOfertasRoute
@@ -239,6 +259,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAutomacoesRoute: AuthenticatedAutomacoesRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedFilaRoute: AuthenticatedFilaRoute,
   AuthenticatedGruposRoute: AuthenticatedGruposRoute,
   AuthenticatedIntegracoesRoute: AuthenticatedIntegracoesRoute,
   AuthenticatedOfertasRoute: AuthenticatedOfertasRoute,
