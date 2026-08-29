@@ -173,6 +173,7 @@ function Integracoes() {
     filled: string[];
   } | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [meliLink, setMeliLink] = useState("");
 
   const saveMutation = useMutation({
     mutationFn: (input: { kind: Kind; provider: string; credentials: Record<string, string> }) =>
