@@ -173,6 +173,7 @@ function Integracoes() {
     filled: string[];
   } | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [meliLink, setMeliLink] = useState("");
 
   const saveMutation = useMutation({
     mutationFn: (input: { kind: Kind; provider: string; credentials: Record<string, string> }) =>
@@ -207,6 +208,7 @@ function Integracoes() {
   const openDialog = (kind: Kind, provider: string, name: string, fields: Field[]) => {
     const row = kind === "marketplace" ? marketplaceRows.get(provider) : channelRows.get(provider);
     setValues({});
+    setMeliLink("");
     setTarget({ kind, provider, name, fields, filled: row?.filledKeys ?? [] });
   };
 
@@ -237,6 +239,12 @@ function Integracoes() {
       </div>
 
       <h2 className="mt-6 text-sm font-semibold text-foreground">Canais de publicação</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        O Telegram conecta por Bot Token e publica sozinho nos seus grupos e canais. Já o WhatsApp
+        não permite login por QR Code do WhatsApp Web em ferramentas externas — isso é proibido pela
+        Meta e derruba o número. Por isso o WhatsApp usa a API oficial (envio 1:1) ou o modo
+        “copiar e publicar”, com a mensagem pronta para colar no grupo.
+      </p>
       <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {Object.values(CHANNEL_CONNECTORS)
           .filter((c) => c.platform !== "other")
