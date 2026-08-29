@@ -1,10 +1,11 @@
-import { Copy, ExternalLink, Send, Star, Ticket, Truck } from "lucide-react";
+import { Copy, ExternalLink, Star, Ticket, Truck } from "lucide-react";
 import { toast } from "sonner";
 import type { DemoOffer } from "@/lib/demo-data";
 import { brl, num, rating as fmtRating } from "@/lib/format";
 import { scoreLabel, scoreTone } from "@/lib/offer-score";
 import { generateCopy } from "@/lib/copy-generator";
 import { Button } from "@/components/ui/button";
+import { PublishDialog } from "@/components/offers/PublishDialog";
 
 const TONE: Record<string, string> = {
   hot: "bg-success/15 text-success border-success/30",
@@ -16,23 +17,24 @@ const TONE: Record<string, string> = {
 export function OfferCard({ offer }: { offer: DemoOffer }) {
   const tone = TONE[scoreTone(offer.score)] ?? TONE["low"];
 
+  const message = generateCopy(
+    {
+      title: offer.title,
+      marketplace: offer.marketplace,
+      price: offer.price,
+      previousPrice: offer.previousPrice,
+      discountPct: offer.discountPct,
+      rating: offer.rating,
+      salesCount: offer.salesCount,
+      coupon: offer.coupon,
+      link: offer.affiliateUrl ?? offer.originalUrl,
+    },
+    { style: "promocional", length: "medio", emojis: true, detail: 4 },
+  );
+
   async function copyMessage() {
-    const text = generateCopy(
-      {
-        title: offer.title,
-        marketplace: offer.marketplace,
-        price: offer.price,
-        previousPrice: offer.previousPrice,
-        discountPct: offer.discountPct,
-        rating: offer.rating,
-        salesCount: offer.salesCount,
-        coupon: offer.coupon,
-        link: offer.affiliateUrl ?? offer.originalUrl,
-      },
-      { style: "promocional", length: "medio", emojis: true, detail: 4 },
-    );
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(message);
       toast.success("Copy copiada para a área de transferência");
     } catch {
       toast.error("Não foi possível copiar a mensagem");
@@ -97,13 +99,7 @@ export function OfferCard({ offer }: { offer: DemoOffer }) {
         <Button size="sm" variant="secondary" className="flex-1 gap-1" onClick={copyMessage}>
           <Copy className="size-3.5" /> Copy
         </Button>
-        <Button
-          size="sm"
-          className="flex-1 gap-1"
-          onClick={() => toast.info("Conecte um grupo em Integrações para publicar")}
-        >
-          <Send className="size-3.5" /> Publicar
-        </Button>
+        <PublishDialog message={message} />
         <Button size="sm" variant="ghost" asChild>
           <a href={offer.originalUrl} target="_blank" rel="noreferrer noopener">
             <ExternalLink className="size-3.5" />
