@@ -47,6 +47,8 @@ export class MarketplaceSyncEngine {
       return result;
     }
 
+    let logId: string | undefined = undefined;
+
     try {
       // 1. Criar registro inicial de log de sincronização (Status: running)
       const { data: logRow, error: logError } = await supabase
@@ -60,7 +62,7 @@ export class MarketplaceSyncEngine {
         .select("id")
         .maybeSingle();
 
-      const logId = logRow?.id;
+      logId = logRow?.id;
 
       // 2. Obter credenciais salvas do usuário para esse marketplace
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
