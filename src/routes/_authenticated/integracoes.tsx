@@ -19,7 +19,7 @@ import {
 
 import { AppShell } from "@/components/layout/AppShell";
 import { BRAND } from "@/lib/branding";
-import { MARKETPLACE_ADAPTERS } from "@/integrations/marketplaces";
+import { MARKETPLACE_ADAPTERS, type MarketplaceSlug } from "@/integrations/marketplaces";
 import { CHANNEL_CONNECTORS } from "@/integrations/channels";
 import {
   listIntegrations,
@@ -159,10 +159,10 @@ function IntegrationCard({
   isUpdatingInterval?: boolean;
 }) {
   const status = isSyncing ? "syncing" : row?.status ?? "not_configured";
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.not_configured;
+  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG["not_configured"];
   const isConnected = row?.status === "connected" || status === "synced";
   const missing = fields.filter((f) => f.required && !row?.filledKeys?.includes(f.key));
-  const adapter = MARKETPLACE_ADAPTERS[slug as any];
+  const adapter = MARKETPLACE_ADAPTERS[slug as MarketplaceSlug];
 
   return (
     <div className="flex flex-col justify-between rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm hover:shadow-md transition-shadow">
@@ -174,8 +174,8 @@ function IntegrationCard({
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
           </div>
-          <Badge variant="outline" className={`text-[10px] px-2 py-0.5 uppercase ${cfg.badgeClass}`}>
-            {cfg.label}
+          <Badge variant="outline" className={`text-[10px] px-2 py-0.5 uppercase ${cfg?.badgeClass ?? ""}`}>
+            {cfg?.label ?? status}
           </Badge>
         </div>
 

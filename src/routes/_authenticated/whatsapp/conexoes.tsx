@@ -142,6 +142,7 @@ function WhatsAppConexoesPage() {
 
       return () => clearInterval(interval);
     }
+    return;
   }, [conn?.status, conn?.id]);
 
   const saveConfigMutation = useMutation({
@@ -217,7 +218,7 @@ function WhatsAppConexoesPage() {
   });
 
   const status = conn?.status || "not_configured";
-  const statusInfo = STATUS_CONFIG[status] || STATUS_CONFIG.not_configured;
+  const statusInfo = STATUS_CONFIG[status] || STATUS_CONFIG["not_configured"];
   const isConnected = status === "connected";
   const isQrReady = status === "qr_ready" && Boolean(conn?.qr_code);
   const isNotConfigured = status === "not_configured";
@@ -244,8 +245,8 @@ function WhatsAppConexoesPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className={`text-xs font-semibold ${statusInfo.badgeClass}`}>
-                {statusInfo.label}
+              <Badge variant="outline" className={`text-xs font-semibold ${statusInfo?.badgeClass ?? ""}`}>
+                {statusInfo?.label ?? status}
               </Badge>
 
               <Button
@@ -538,7 +539,7 @@ function WhatsAppConexoesPage() {
             <dl className="space-y-1.5 text-[11px]">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Status:</dt>
-                <dd className="font-semibold text-foreground capitalize">{statusInfo.label}</dd>
+                <dd className="font-semibold text-foreground capitalize">{statusInfo?.label ?? status}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Instância:</dt>
@@ -549,7 +550,7 @@ function WhatsAppConexoesPage() {
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Gateway URL:</dt>
                 <dd className="font-mono text-[10px] text-muted-foreground truncate max-w-[140px]">
-                  {conn?.api_url || process.env.WHATSAPP_GATEWAY_URL || "Não configurado"}
+                  {conn?.api_url || process.env["WHATSAPP_GATEWAY_URL"] || "Não configurado"}
                 </dd>
               </div>
             </dl>

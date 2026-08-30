@@ -115,6 +115,6 @@ export function analyzeBestTime(performances: Array<{
     worstHour,
     hourlyBreakdown,
     bestDayOfWeek,
-    bestDayLabel: bestDayOfWeek !== null ? DAY_LABELS[bestDayOfWeek] : null,
+    bestDayLabel: bestDayOfWeek !== null ? (DAY_LABELS[bestDayOfWeek] ?? null) : null,
   };
 }

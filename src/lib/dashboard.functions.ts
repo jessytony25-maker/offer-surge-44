@@ -54,7 +54,7 @@ export const getDashboardStats = createServerFn({ method: "GET" })
 
     // 2. Processamento de Métricas
     const totalOffers = offersList.length;
-    const publishedTelegram = queueList.filter((q) => q.status === "published" || q.status === "sent").length;
+    const publishedTelegram = queueList.filter((q) => q.status === "published").length;
     const publishedWhatsApp = waQueueList.filter((q) => q.status === "sent" || q.status === "published").length;
     const totalPublished = publishedTelegram + publishedWhatsApp;
 
@@ -78,8 +78,9 @@ export const getDashboardStats = createServerFn({ method: "GET" })
 
     linksList.forEach((link) => {
       const mkt = (link.marketplace || "").toLowerCase();
-      if (mkt in mktSums) {
-        mktSums[mkt] += Number(link.commission) || 0;
+      const key = mkt as keyof typeof mktSums;
+      if (mktSums[key] !== undefined) {
+        mktSums[key] += Number(link.commission) || 0;
       }
     });
 

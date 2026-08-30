@@ -23,8 +23,8 @@ export class WhatsAppGatewayProvider implements IWhatsAppProvider {
   private defaultApiKey: string;
 
   constructor(
-    defaultBaseUrl = process.env.WHATSAPP_GATEWAY_URL || "",
-    defaultApiKey = process.env.WHATSAPP_GATEWAY_KEY || process.env.WHATSAPP_API_KEY || "",
+    defaultBaseUrl = process.env["WHATSAPP_GATEWAY_URL"] || "",
+    defaultApiKey = process.env["WHATSAPP_GATEWAY_KEY"] || process.env["WHATSAPP_API_KEY"] || "",
   ) {
     this.defaultBaseUrl = defaultBaseUrl.trim().replace(/\/+$/, "");
     this.defaultApiKey = defaultApiKey.trim();

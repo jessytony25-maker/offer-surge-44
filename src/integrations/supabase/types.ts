@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       affiliate_accounts: {
         Row: {
           affiliate_id: string | null
@@ -61,6 +91,75 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "marketplaces"
             referencedColumns: ["slug"]
+          },
+        ]
+      }
+      affiliate_links: {
+        Row: {
+          affiliate_program: string
+          affiliate_url: string
+          clicks: number
+          created_at: string
+          id: string
+          last_used_at: string | null
+          marketplace: string
+          method: string
+          offer_id: string | null
+          original_url: string
+          product_id: string | null
+          sub_id: string | null
+          tracking_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          affiliate_program: string
+          affiliate_url: string
+          clicks?: number
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          marketplace: string
+          method?: string
+          offer_id?: string | null
+          original_url: string
+          product_id?: string | null
+          sub_id?: string | null
+          tracking_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          affiliate_program?: string
+          affiliate_url?: string
+          clicks?: number
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          marketplace?: string
+          method?: string
+          offer_id?: string | null
+          original_url?: string
+          product_id?: string | null
+          sub_id?: string | null
+          tracking_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_links_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_links_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -131,6 +230,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "automation_rules_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_runs: {
+        Row: {
+          automation_id: string
+          created_at: string
+          errors: number
+          finished_at: string | null
+          id: string
+          last_error: string | null
+          offers_evaluated: number
+          offers_published: number
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          automation_id: string
+          created_at?: string
+          errors?: number
+          finished_at?: string | null
+          id?: string
+          last_error?: string | null
+          offers_evaluated?: number
+          offers_published?: number
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Update: {
+          automation_id?: string
+          created_at?: string
+          errors?: number
+          finished_at?: string | null
+          id?: string
+          last_error?: string | null
+          offers_evaluated?: number
+          offers_published?: number
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_automation_id_fkey"
             columns: ["automation_id"]
             isOneToOne: false
             referencedRelation: "automations"
@@ -257,6 +406,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      channel_health: {
+        Row: {
+          channel: string
+          created_at: string
+          failure_count: number
+          group_id: string | null
+          id: string
+          last_error: string | null
+          last_failure_at: string | null
+          last_success_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          failure_count?: number
+          group_id?: string | null
+          id?: string
+          last_error?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          failure_count?: number
+          group_id?: string | null
+          id?: string
+          last_error?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_health_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clicks: {
         Row: {
@@ -399,6 +598,66 @@ export type Database = {
           },
         ]
       }
+      copy_experiments: {
+        Row: {
+          clicks: number
+          conversions: number
+          copy_text: string
+          created_at: string
+          group_id: string | null
+          id: string
+          impressions: number
+          is_winner: boolean | null
+          offer_id: string | null
+          updated_at: string
+          user_id: string
+          variant_name: string
+        }
+        Insert: {
+          clicks?: number
+          conversions?: number
+          copy_text: string
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          impressions?: number
+          is_winner?: boolean | null
+          offer_id?: string | null
+          updated_at?: string
+          user_id?: string
+          variant_name: string
+        }
+        Update: {
+          clicks?: number
+          conversions?: number
+          copy_text?: string
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          impressions?: number
+          is_winner?: boolean | null
+          offer_id?: string | null
+          updated_at?: string
+          user_id?: string
+          variant_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "copy_experiments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "copy_experiments_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupons: {
         Row: {
           code: string
@@ -437,6 +696,56 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "marketplaces"
             referencedColumns: ["slug"]
+          },
+        ]
+      }
+      group_performance: {
+        Row: {
+          clicks: number
+          commission: number
+          created_at: string
+          date: string
+          group_id: string
+          id: string
+          publications_count: number
+          revenue: number
+          sales: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clicks?: number
+          commission?: number
+          created_at?: string
+          date: string
+          group_id: string
+          id?: string
+          publications_count?: number
+          revenue?: number
+          sales?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          clicks?: number
+          commission?: number
+          created_at?: string
+          date?: string
+          group_id?: string
+          id?: string
+          publications_count?: number
+          revenue?: number
+          sales?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_performance_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -581,6 +890,7 @@ export type Database = {
       }
       marketplace_connections: {
         Row: {
+          auto_sync_interval: string | null
           created_at: string
           id: string
           last_error: string | null
@@ -592,6 +902,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          auto_sync_interval?: string | null
           created_at?: string
           id?: string
           last_error?: string | null
@@ -603,6 +914,7 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          auto_sync_interval?: string | null
           created_at?: string
           id?: string
           last_error?: string | null
@@ -622,6 +934,54 @@ export type Database = {
             referencedColumns: ["slug"]
           },
         ]
+      }
+      marketplace_sync_logs: {
+        Row: {
+          created_at: string
+          error_count: number
+          finished_at: string | null
+          id: string
+          items_found: number
+          items_imported: number
+          items_skipped: number
+          items_updated: number
+          last_error: string | null
+          marketplace: string
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_count?: number
+          finished_at?: string | null
+          id?: string
+          items_found?: number
+          items_imported?: number
+          items_skipped?: number
+          items_updated?: number
+          last_error?: string | null
+          marketplace: string
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          error_count?: number
+          finished_at?: string | null
+          id?: string
+          items_found?: number
+          items_imported?: number
+          items_skipped?: number
+          items_updated?: number
+          last_error?: string | null
+          marketplace?: string
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       marketplaces: {
         Row: {
@@ -682,6 +1042,110 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      offer_performance: {
+        Row: {
+          clicks: number
+          commission: number
+          conversions: number
+          created_at: string
+          date: string
+          id: string
+          impressions: number
+          offer_id: string
+          revenue: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clicks?: number
+          commission?: number
+          conversions?: number
+          created_at?: string
+          date: string
+          id?: string
+          impressions?: number
+          offer_id: string
+          revenue?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          clicks?: number
+          commission?: number
+          conversions?: number
+          created_at?: string
+          date?: string
+          id?: string
+          impressions?: number
+          offer_id?: string
+          revenue?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_performance_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offer_price_history: {
+        Row: {
+          captured_at: string
+          discount_pct: number | null
+          id: string
+          marketplace: string
+          offer_id: string | null
+          price: number
+          product_id: string | null
+          promo_price: number | null
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          captured_at?: string
+          discount_pct?: number | null
+          id?: string
+          marketplace: string
+          offer_id?: string | null
+          price: number
+          product_id?: string | null
+          promo_price?: number | null
+          source?: string | null
+          user_id?: string
+        }
+        Update: {
+          captured_at?: string
+          discount_pct?: number | null
+          id?: string
+          marketplace?: string
+          offer_id?: string | null
+          price?: number
+          product_id?: string | null
+          promo_price?: number | null
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_price_history_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       offer_score_weights: {
         Row: {
@@ -837,6 +1301,108 @@ export type Database = {
           },
           {
             foreignKeyName: "offers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_limits: {
+        Row: {
+          analytics_retention_days: number
+          created_at: string
+          features: Json
+          id: string
+          max_automations: number
+          max_groups: number
+          max_products: number
+          max_publications_per_day: number
+          max_sources: number
+          max_templates: number
+          plan: string
+          updated_at: string
+        }
+        Insert: {
+          analytics_retention_days?: number
+          created_at?: string
+          features?: Json
+          id?: string
+          max_automations?: number
+          max_groups?: number
+          max_products?: number
+          max_publications_per_day?: number
+          max_sources?: number
+          max_templates?: number
+          plan: string
+          updated_at?: string
+        }
+        Update: {
+          analytics_retention_days?: number
+          created_at?: string
+          features?: Json
+          id?: string
+          max_automations?: number
+          max_groups?: number
+          max_products?: number
+          max_publications_per_day?: number
+          max_sources?: number
+          max_templates?: number
+          plan?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      price_alerts: {
+        Row: {
+          created_at: string
+          id: string
+          marketplace: string
+          offer_id: string | null
+          product_id: string | null
+          status: string
+          target_discount_pct: number | null
+          target_price: number | null
+          triggered_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          marketplace: string
+          offer_id?: string | null
+          product_id?: string | null
+          status?: string
+          target_discount_pct?: number | null
+          target_price?: number | null
+          triggered_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          marketplace?: string
+          offer_id?: string | null
+          product_id?: string | null
+          status?: string
+          target_discount_pct?: number | null
+          target_price?: number | null
+          triggered_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_alerts_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_alerts_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
@@ -1130,6 +1696,72 @@ export type Database = {
           },
         ]
       }
+      retry_queue: {
+        Row: {
+          attempts: number
+          channel: string
+          created_at: string
+          destination_id: string
+          id: string
+          last_error: string | null
+          max_attempts: number
+          next_retry_at: string
+          payload: Json
+          publication_id: string | null
+          queue_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          channel: string
+          created_at?: string
+          destination_id: string
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          next_retry_at?: string
+          payload: Json
+          publication_id?: string | null
+          queue_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          attempts?: number
+          channel?: string
+          created_at?: string
+          destination_id?: string
+          id?: string
+          last_error?: string | null
+          max_attempts?: number
+          next_retry_at?: string
+          payload?: Json
+          publication_id?: string | null
+          queue_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retry_queue_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "publications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retry_queue_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "publication_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       source_messages: {
         Row: {
           created_at: string
@@ -1273,6 +1905,42 @@ export type Database = {
         }
         Relationships: []
       }
+      system_notifications: {
+        Row: {
+          created_at: string
+          data: Json | null
+          id: string
+          message: string
+          read: boolean
+          sent_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean
+          sent_at?: string | null
+          title: string
+          type: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean
+          sent_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       templates: {
         Row: {
           body: string
@@ -1318,6 +1986,196 @@ export type Database = {
         }
         Relationships: []
       }
+      tracking_links: {
+        Row: {
+          affiliate_link_id: string | null
+          clicks: number
+          commission: number
+          conversions: number
+          created_at: string
+          destination_url: string
+          group_id: string | null
+          id: string
+          last_clicked_at: string | null
+          marketplace: string | null
+          offer_id: string | null
+          publication_id: string | null
+          revenue: number
+          short_code: string
+          unique_clicks: number
+          updated_at: string
+          user_id: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          affiliate_link_id?: string | null
+          clicks?: number
+          commission?: number
+          conversions?: number
+          created_at?: string
+          destination_url: string
+          group_id?: string | null
+          id?: string
+          last_clicked_at?: string | null
+          marketplace?: string | null
+          offer_id?: string | null
+          publication_id?: string | null
+          revenue?: number
+          short_code: string
+          unique_clicks?: number
+          updated_at?: string
+          user_id?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          affiliate_link_id?: string | null
+          clicks?: number
+          commission?: number
+          conversions?: number
+          created_at?: string
+          destination_url?: string
+          group_id?: string | null
+          id?: string
+          last_clicked_at?: string | null
+          marketplace?: string | null
+          offer_id?: string | null
+          publication_id?: string | null
+          revenue?: number
+          short_code?: string
+          unique_clicks?: number
+          updated_at?: string
+          user_id?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_links_affiliate_link_id_fkey"
+            columns: ["affiliate_link_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_links_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_links_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_links_publication_id_fkey"
+            columns: ["publication_id"]
+            isOneToOne: false
+            referencedRelation: "publications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_brand: {
+        Row: {
+          brand_name: string | null
+          created_at: string
+          default_signature: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          updated_at: string
+          user_id: string
+          website_url: string | null
+        }
+        Insert: {
+          brand_name?: string | null
+          created_at?: string
+          default_signature?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+          user_id?: string
+          website_url?: string | null
+        }
+        Update: {
+          brand_name?: string | null
+          created_at?: string
+          default_signature?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+          user_id?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          compact_mode: boolean
+          created_at: string
+          currency: string
+          default_copy_template_id: string | null
+          default_language: string
+          default_tone: string
+          id: string
+          notify_browser: boolean
+          notify_email: boolean
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          compact_mode?: boolean
+          created_at?: string
+          currency?: string
+          default_copy_template_id?: string | null
+          default_language?: string
+          default_tone?: string
+          id?: string
+          notify_browser?: boolean
+          notify_email?: boolean
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          compact_mode?: boolean
+          created_at?: string
+          currency?: string
+          default_copy_template_id?: string | null
+          default_language?: string
+          default_tone?: string
+          id?: string
+          notify_browser?: boolean
+          notify_email?: boolean
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_default_copy_template_id_fkey"
+            columns: ["default_copy_template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1335,6 +2193,292 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_connections: {
+        Row: {
+          api_key: string | null
+          api_url: string | null
+          connected_at: string | null
+          created_at: string
+          disconnected_at: string | null
+          display_name: string | null
+          id: string
+          instance_name: string | null
+          last_seen_at: string | null
+          phone_number: string | null
+          provider: string
+          qr_code: string | null
+          session_identifier: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_key?: string | null
+          api_url?: string | null
+          connected_at?: string | null
+          created_at?: string
+          disconnected_at?: string | null
+          display_name?: string | null
+          id?: string
+          instance_name?: string | null
+          last_seen_at?: string | null
+          phone_number?: string | null
+          provider?: string
+          qr_code?: string | null
+          session_identifier: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_key?: string | null
+          api_url?: string | null
+          connected_at?: string | null
+          created_at?: string
+          disconnected_at?: string | null
+          display_name?: string | null
+          id?: string
+          instance_name?: string | null
+          last_seen_at?: string | null
+          phone_number?: string | null
+          provider?: string
+          qr_code?: string | null
+          session_identifier?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_groups: {
+        Row: {
+          allowed_categories: string[]
+          allowed_end_time: string
+          allowed_marketplaces: string[]
+          allowed_start_time: string
+          category_id: string | null
+          connection_id: string
+          copy_template: string | null
+          created_at: string
+          daily_limit: number
+          description: string | null
+          external_group_id: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_selected: boolean
+          last_synced_at: string | null
+          minimum_discount: number
+          minimum_offer_score: number
+          name: string
+          participant_count: number
+          posting_interval_minutes: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allowed_categories?: string[]
+          allowed_end_time?: string
+          allowed_marketplaces?: string[]
+          allowed_start_time?: string
+          category_id?: string | null
+          connection_id: string
+          copy_template?: string | null
+          created_at?: string
+          daily_limit?: number
+          description?: string | null
+          external_group_id: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_selected?: boolean
+          last_synced_at?: string | null
+          minimum_discount?: number
+          minimum_offer_score?: number
+          name: string
+          participant_count?: number
+          posting_interval_minutes?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allowed_categories?: string[]
+          allowed_end_time?: string
+          allowed_marketplaces?: string[]
+          allowed_start_time?: string
+          category_id?: string | null
+          connection_id?: string
+          copy_template?: string | null
+          created_at?: string
+          daily_limit?: number
+          description?: string | null
+          external_group_id?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_selected?: boolean
+          last_synced_at?: string | null
+          minimum_discount?: number
+          minimum_offer_score?: number
+          name?: string
+          participant_count?: number
+          posting_interval_minutes?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_groups_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_logs: {
+        Row: {
+          attempt: number
+          connection_id: string | null
+          created_at: string
+          group_name: string | null
+          id: string
+          offer_title: string | null
+          reason: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          attempt?: number
+          connection_id?: string | null
+          created_at?: string
+          group_name?: string | null
+          id?: string
+          offer_title?: string | null
+          reason?: string | null
+          status: string
+          user_id: string
+        }
+        Update: {
+          attempt?: number
+          connection_id?: string | null
+          created_at?: string
+          group_name?: string | null
+          id?: string
+          offer_title?: string | null
+          reason?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_logs_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_publication_queue: {
+        Row: {
+          attempts: number
+          connection_id: string | null
+          created_at: string
+          group_id: string
+          id: string
+          last_error: string | null
+          media_url: string | null
+          message: string
+          offer_id: string | null
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          connection_id?: string | null
+          created_at?: string
+          group_id: string
+          id?: string
+          last_error?: string | null
+          media_url?: string | null
+          message: string
+          offer_id?: string | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          connection_id?: string | null
+          created_at?: string
+          group_id?: string
+          id?: string
+          last_error?: string | null
+          media_url?: string | null
+          message?: string
+          offer_id?: string | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_publication_queue_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_publication_queue_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_settings: {
+        Row: {
+          default_api_key: string | null
+          default_api_url: string | null
+          duplicate_window_hours: number
+          global_daily_limit: number
+          global_min_interval_minutes: number
+          pause_on_disconnect: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          default_api_key?: string | null
+          default_api_url?: string | null
+          duplicate_window_hours?: number
+          global_daily_limit?: number
+          global_min_interval_minutes?: number
+          pause_on_disconnect?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          default_api_key?: string | null
+          default_api_url?: string | null
+          duplicate_window_hours?: number
+          global_daily_limit?: number
+          global_min_interval_minutes?: number
+          pause_on_disconnect?: boolean
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

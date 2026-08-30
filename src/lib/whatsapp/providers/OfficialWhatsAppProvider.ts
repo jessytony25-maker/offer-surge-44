@@ -13,7 +13,7 @@ export class OfficialWhatsAppProvider implements IWhatsAppProvider {
   private token: string;
   private phoneNumberId: string;
 
-  constructor(token = process.env.WHATSAPP_CLOUD_TOKEN || "", phoneNumberId = process.env.WHATSAPP_PHONE_ID || "") {
+  constructor(token = process.env["WHATSAPP_CLOUD_TOKEN"] || "", phoneNumberId = process.env["WHATSAPP_PHONE_ID"] || "") {
     this.token = token;
     this.phoneNumberId = phoneNumberId;
   }

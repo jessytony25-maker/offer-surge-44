@@ -13,7 +13,7 @@ export class ExternalGatewayProvider implements IWhatsAppProvider {
   private baseUrl: string;
   private apiKey: string;
 
-  constructor(baseUrl = process.env.WHATSAPP_GATEWAY_URL || "", apiKey = process.env.WHATSAPP_GATEWAY_KEY || "") {
+  constructor(baseUrl = process.env["WHATSAPP_GATEWAY_URL"] || "", apiKey = process.env["WHATSAPP_GATEWAY_KEY"] || "") {
     this.baseUrl = baseUrl;
     this.apiKey = apiKey;
   }
