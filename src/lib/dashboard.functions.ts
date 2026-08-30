@@ -78,8 +78,9 @@ export const getDashboardStats = createServerFn({ method: "GET" })
 
     linksList.forEach((link) => {
       const mkt = (link.marketplace || "").toLowerCase();
-      if (mkt in mktSums) {
-        mktSums[mkt] += Number(link.commission) || 0;
+      const key = mkt as keyof typeof mktSums;
+      if (mktSums[key] !== undefined) {
+        mktSums[key] += Number(link.commission) || 0;
       }
     });
 
