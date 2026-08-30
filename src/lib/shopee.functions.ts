@@ -42,107 +42,20 @@ export const shopeeAnalytics = createServerFn({ method: "POST" })
     const appId = creds["api_key"];
     const secret = creds["api_secret"];
 
-    // Se NÃO estiver conectado, retorna dados ricos de demonstração para visualização imediata
+    // Se NÃO estiver conectado, retorna dados vazios com aviso de não configurado
     if (!appId || !secret) {
-      const now = new Date();
-      const daysCount = Math.max(
-        1,
-        Math.round((data.endSec - data.startSec) / (24 * 3600)) || 1,
-      );
-
-      const daily: ShopeeAnalytics["daily"] = [];
-      let totalClicks = 0;
-      let totalOrders = 0;
-      let totalRevenue = 0;
-      let totalCommission = 0;
-
-      for (let i = daysCount - 1; i >= 0; i--) {
-        const d = new Date(now.getTime() - i * 24 * 3600 * 1000);
-        const dateStr = d.toISOString().slice(0, 10);
-        const dayClicks = Math.floor(40 + Math.sin(i) * 20 + (i % 3) * 15);
-        const dayOrders = Math.max(1, Math.floor(dayClicks * 0.08));
-        const dayRevenue = dayOrders * (85 + (i % 5) * 20);
-        const dayCommission = dayRevenue * 0.12;
-
-        totalClicks += dayClicks;
-        totalOrders += dayOrders;
-        totalRevenue += dayRevenue;
-        totalCommission += dayCommission;
-
-        daily.push({
-          date: dateStr,
-          clicks: dayClicks,
-          orders: dayOrders,
-          revenue: Math.round(dayRevenue * 100) / 100,
-          commission: Math.round(dayCommission * 100) / 100,
-        });
-      }
-
-      const topItems: ShopeeAnalytics["topItems"] = [
-        {
-          name: "Fone de Ouvido Bluetooth Sem Fio TWS AirPro 3",
-          itemId: "11223344",
-          qty: 68,
-          revenue: 3393.2,
-          commission: 475.05,
-          image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=150&auto=format&fit=crop&q=80",
-          shop: "Shopee Oficial Eletrônicos",
-          link: "https://shopee.com.br",
-        },
-        {
-          name: "Smartwatch Ultra Série 9 Tela AMOLED Resistente à Água",
-          itemId: "22334455",
-          qty: 42,
-          revenue: 6258.0,
-          commission: 750.96,
-          image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=150&auto=format&fit=crop&q=80",
-          shop: "Tech Global Store",
-          link: "https://shopee.com.br",
-        },
-        {
-          name: "Mini Processador e Triturador de Alimentos USB Inox",
-          itemId: "33445566",
-          qty: 35,
-          revenue: 1046.5,
-          commission: 146.51,
-          image: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=150&auto=format&fit=crop&q=80",
-          shop: "Casa & Utilidades BR",
-          link: "https://shopee.com.br",
-        },
-        {
-          name: "Kit 5 Camisetas Masculinas Dry Fit Academia Conforto",
-          itemId: "44556677",
-          qty: 29,
-          revenue: 2581.0,
-          commission: 361.34,
-          image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=150&auto=format&fit=crop&q=80",
-          shop: "Moda Fitness Brasil",
-          link: "https://shopee.com.br",
-        },
-        {
-          name: "Luminária de Mesa LED Articulada com Carregador por Indução",
-          itemId: "55667788",
-          qty: 21,
-          revenue: 1659.0,
-          commission: 232.26,
-          image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=150&auto=format&fit=crop&q=80",
-          shop: "Home Decor Shopee",
-          link: "https://shopee.com.br",
-        },
-      ];
-
       return {
         connected: false,
-        isDemo: true,
-        message: "Mostrando dados de demonstração. Conecte seu App ID + Senha da API da Shopee em Integrações para carregar seus relatórios oficiais.",
-        clicks: totalClicks,
-        orders: totalOrders,
-        items: Math.round(totalOrders * 1.4),
-        revenue: Math.round(totalRevenue * 100) / 100,
-        commission: Math.round(totalCommission * 100) / 100,
-        conversionRate: totalClicks > 0 ? Math.round((totalOrders / totalClicks) * 1000) / 10 : 0,
-        daily,
-        topItems,
+        isDemo: false,
+        message: "A API da Shopee não está configurada em suas Integrações. Configure suas chaves para visualizar métricas reais.",
+        clicks: 0,
+        orders: 0,
+        items: 0,
+        revenue: 0,
+        commission: 0,
+        conversionRate: 0,
+        daily: [],
+        topItems: [],
       };
     }
 

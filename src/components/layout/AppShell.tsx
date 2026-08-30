@@ -16,8 +16,6 @@ import {
 import { useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/branding";
-import { useAppState } from "@/lib/app-state";
-import { DemoBadge } from "@/components/DemoBadge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
@@ -87,7 +85,6 @@ export function AppShell({
 }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const { demoMode } = useAppState();
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -135,7 +132,6 @@ export function AppShell({
                 <h1 className="truncate text-base font-semibold text-foreground sm:text-lg">
                   {title}
                 </h1>
-                {demoMode ? <DemoBadge /> : null}
               </div>
               {description ? (
                 <p className="truncate text-xs text-muted-foreground">{description}</p>

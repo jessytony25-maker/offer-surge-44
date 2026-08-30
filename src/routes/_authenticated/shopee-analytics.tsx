@@ -172,12 +172,12 @@ function ShopeeAnalyticsPage() {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-foreground">
-                {metrics.connected ? "Shopee Open API Conectada" : "Modo Demonstração Shopee"}
+                {metrics.connected ? "Shopee Open API Conectada" : "Shopee Não Conectada"}
               </h3>
               <Badge variant="outline" className={`text-[10px] uppercase font-semibold ${
                 metrics.connected ? "border-emerald-500/40 text-emerald-600 bg-emerald-500/10" : "border-amber-500/40 text-amber-600 bg-amber-500/10"
               }`}>
-                {metrics.connected ? "Oficial" : "Demo"}
+                {metrics.connected ? "Oficial" : "Inativo"}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">

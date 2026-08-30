@@ -11,12 +11,12 @@ interface AppState {
   setDemoMode: (v: boolean) => void;
 }
 
-const Ctx = createContext<AppState>({ demoMode: true, setDemoMode: () => {} });
+const Ctx = createContext<AppState>({ demoMode: false, setDemoMode: () => {} });
 
 const KEY = "oferta-hub:demo-mode";
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const [demoMode, setDemoModeState] = useState(true);
+  const [demoMode, setDemoModeState] = useState(false);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(KEY);
