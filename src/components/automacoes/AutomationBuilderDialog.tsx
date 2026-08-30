@@ -149,7 +149,7 @@ export function AutomationBuilderDialog({
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(initialRule?.group_ids ?? []);
   const [copyTemplateId, setCopyTemplateId] = useState(initialRule?.copy_template_id ?? "urgency");
   const [customCopy, setCustomCopy] = useState(
-    initialRule?.custom_copy ?? COPY_TEMPLATES[0].text,
+    initialRule?.custom_copy ?? COPY_TEMPLATES[0]?.text ?? "",
   );
 
   // Limites
