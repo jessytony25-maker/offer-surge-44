@@ -8,7 +8,10 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  Menu, ListChecks,
+  Menu,
+  ListChecks,
+  ShoppingBag,
+  MessageSquare,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +24,8 @@ import { Button } from "@/components/ui/button";
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/ofertas", label: "Ofertas", icon: Tag },
+  { to: "/whatsapp/conexoes", label: "WhatsApp", icon: MessageSquare },
+  { to: "/shopee-analytics", label: "Shopee Analytics", icon: ShoppingBag },
   { to: "/grupos", label: "Grupos", icon: Users },
   { to: "/fila", label: "Fila", icon: ListChecks },
   { to: "/automacoes", label: "Automações", icon: Zap },
@@ -34,7 +39,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="flex flex-col gap-1">
       {NAV.map(({ to, label, icon: Icon }) => {
-        const active = pathname === to;
+        const active = pathname === to || (to === "/whatsapp/conexoes" && pathname.startsWith("/whatsapp"));
         return (
           <Link
             key={to}

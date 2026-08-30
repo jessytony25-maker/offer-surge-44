@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { TelegramQrConnector } from "@/components/telegram/TelegramQrConnector";
 
 export const Route = createFileRoute("/_authenticated/integracoes")({
   head: () => ({
@@ -213,7 +214,15 @@ function Integracoes() {
   };
 
   return (
-    <AppShell title="Integrações" description="Marketplaces e canais oficiais">
+    <AppShell
+      title="Integrações"
+      description="Marketplaces e canais oficiais"
+      actions={
+        <TelegramQrConnector
+          onGroupsUpdated={() => queryClient.invalidateQueries({ queryKey: ["integrations"] })}
+        />
+      }
+    >
       <p className="text-sm text-muted-foreground">
         Cada integração fica em “aguardando configuração” até você informar as credenciais oficiais
         do programa de afiliados ou da API do canal. As chaves ficam guardadas no backend e nunca

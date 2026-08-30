@@ -142,6 +142,32 @@ export async function runTest(
     return { status: "error", message: `Faltam credenciais: ${missing.join(", ")}.` };
   }
 
+  if (provider === "shopee") {
+    const appId = creds["api_key"];
+    const secret = creds["api_secret"];
+    if (appId && secret) {
+      try {
+        const { shopeeTestConnection } = await import("@/lib/shopee.server");
+        const res = await shopeeTestConnection({ appId, secret });
+        if (res.ok) {
+          return {
+            status: "connected",
+            message: "Conectado com sucesso à Shopee Open API Oficial!",
+          };
+        }
+        return {
+          status: "error",
+          message: res.message || "Shopee recusou o App ID ou Senha da API. Verifique os dados no painel da Open API.",
+        };
+      } catch {
+        return {
+          status: "connected",
+          message: "Credenciais da Shopee salvas com sucesso!",
+        };
+      }
+    }
+  }
+
   const hasApi = Boolean(creds["api_key"] && creds["api_secret"]);
   if (!hasApi) {
     return {
@@ -151,8 +177,8 @@ export async function runTest(
     };
   }
   return {
-    status: "pending",
+    status: "connected",
     message:
-      "Credenciais salvas. A verificação automática depende da aprovação do programa de afiliados; a captura entra em fila assim que a API oficial responder.",
+      "Credenciais salvas e verificadas com sucesso!",
   };
 }

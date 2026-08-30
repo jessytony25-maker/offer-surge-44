@@ -20,6 +20,13 @@ import { Route as AuthenticatedGruposRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedIntegracoesRouteImport } from './routes/_authenticated/integracoes'
 import { Route as AuthenticatedOfertasRouteImport } from './routes/_authenticated/ofertas'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
+import { Route as AuthenticatedShopeeAnalyticsRouteImport } from './routes/_authenticated/shopee-analytics'
+import { Route as AuthenticatedWhatsappIndexRouteImport } from './routes/_authenticated/whatsapp/index'
+import { Route as AuthenticatedWhatsappConexoesRouteImport } from './routes/_authenticated/whatsapp/conexoes'
+import { Route as AuthenticatedWhatsappConfiguracoesRouteImport } from './routes/_authenticated/whatsapp/configuracoes'
+import { Route as AuthenticatedWhatsappGruposRouteImport } from './routes/_authenticated/whatsapp/grupos'
+import { Route as AuthenticatedWhatsappLogsRouteImport } from './routes/_authenticated/whatsapp/logs'
+import { Route as AuthenticatedWhatsappPublicacoesRouteImport } from './routes/_authenticated/whatsapp/publicacoes'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -77,6 +84,48 @@ const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
   path: '/relatorios',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedShopeeAnalyticsRoute =
+  AuthenticatedShopeeAnalyticsRouteImport.update({
+    id: '/shopee-analytics',
+    path: '/shopee-analytics',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWhatsappIndexRoute =
+  AuthenticatedWhatsappIndexRouteImport.update({
+    id: '/whatsapp/',
+    path: '/whatsapp/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWhatsappConexoesRoute =
+  AuthenticatedWhatsappConexoesRouteImport.update({
+    id: '/whatsapp/conexoes',
+    path: '/whatsapp/conexoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWhatsappConfiguracoesRoute =
+  AuthenticatedWhatsappConfiguracoesRouteImport.update({
+    id: '/whatsapp/configuracoes',
+    path: '/whatsapp/configuracoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWhatsappGruposRoute =
+  AuthenticatedWhatsappGruposRouteImport.update({
+    id: '/whatsapp/grupos',
+    path: '/whatsapp/grupos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWhatsappLogsRoute =
+  AuthenticatedWhatsappLogsRouteImport.update({
+    id: '/whatsapp/logs',
+    path: '/whatsapp/logs',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWhatsappPublicacoesRoute =
+  AuthenticatedWhatsappPublicacoesRouteImport.update({
+    id: '/whatsapp/publicacoes',
+    path: '/whatsapp/publicacoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,6 +138,13 @@ export interface FileRoutesByFullPath {
   '/integracoes': typeof AuthenticatedIntegracoesRoute
   '/ofertas': typeof AuthenticatedOfertasRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/shopee-analytics': typeof AuthenticatedShopeeAnalyticsRoute
+  '/whatsapp/conexoes': typeof AuthenticatedWhatsappConexoesRoute
+  '/whatsapp/configuracoes': typeof AuthenticatedWhatsappConfiguracoesRoute
+  '/whatsapp/grupos': typeof AuthenticatedWhatsappGruposRoute
+  '/whatsapp/logs': typeof AuthenticatedWhatsappLogsRoute
+  '/whatsapp/publicacoes': typeof AuthenticatedWhatsappPublicacoesRoute
+  '/whatsapp/': typeof AuthenticatedWhatsappIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -101,6 +157,13 @@ export interface FileRoutesByTo {
   '/integracoes': typeof AuthenticatedIntegracoesRoute
   '/ofertas': typeof AuthenticatedOfertasRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/shopee-analytics': typeof AuthenticatedShopeeAnalyticsRoute
+  '/whatsapp/conexoes': typeof AuthenticatedWhatsappConexoesRoute
+  '/whatsapp/configuracoes': typeof AuthenticatedWhatsappConfiguracoesRoute
+  '/whatsapp/grupos': typeof AuthenticatedWhatsappGruposRoute
+  '/whatsapp/logs': typeof AuthenticatedWhatsappLogsRoute
+  '/whatsapp/publicacoes': typeof AuthenticatedWhatsappPublicacoesRoute
+  '/whatsapp': typeof AuthenticatedWhatsappIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -115,6 +178,13 @@ export interface FileRoutesById {
   '/_authenticated/integracoes': typeof AuthenticatedIntegracoesRoute
   '/_authenticated/ofertas': typeof AuthenticatedOfertasRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/shopee-analytics': typeof AuthenticatedShopeeAnalyticsRoute
+  '/_authenticated/whatsapp/conexoes': typeof AuthenticatedWhatsappConexoesRoute
+  '/_authenticated/whatsapp/configuracoes': typeof AuthenticatedWhatsappConfiguracoesRoute
+  '/_authenticated/whatsapp/grupos': typeof AuthenticatedWhatsappGruposRoute
+  '/_authenticated/whatsapp/logs': typeof AuthenticatedWhatsappLogsRoute
+  '/_authenticated/whatsapp/publicacoes': typeof AuthenticatedWhatsappPublicacoesRoute
+  '/_authenticated/whatsapp/': typeof AuthenticatedWhatsappIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -129,6 +199,13 @@ export interface FileRouteTypes {
     | '/integracoes'
     | '/ofertas'
     | '/relatorios'
+    | '/shopee-analytics'
+    | '/whatsapp/conexoes'
+    | '/whatsapp/configuracoes'
+    | '/whatsapp/grupos'
+    | '/whatsapp/logs'
+    | '/whatsapp/publicacoes'
+    | '/whatsapp/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -141,6 +218,13 @@ export interface FileRouteTypes {
     | '/integracoes'
     | '/ofertas'
     | '/relatorios'
+    | '/shopee-analytics'
+    | '/whatsapp/conexoes'
+    | '/whatsapp/configuracoes'
+    | '/whatsapp/grupos'
+    | '/whatsapp/logs'
+    | '/whatsapp/publicacoes'
+    | '/whatsapp'
   id:
     | '__root__'
     | '/'
@@ -154,6 +238,13 @@ export interface FileRouteTypes {
     | '/_authenticated/integracoes'
     | '/_authenticated/ofertas'
     | '/_authenticated/relatorios'
+    | '/_authenticated/shopee-analytics'
+    | '/_authenticated/whatsapp/conexoes'
+    | '/_authenticated/whatsapp/configuracoes'
+    | '/_authenticated/whatsapp/grupos'
+    | '/_authenticated/whatsapp/logs'
+    | '/_authenticated/whatsapp/publicacoes'
+    | '/_authenticated/whatsapp/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -241,6 +332,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/shopee-analytics': {
+      id: '/_authenticated/shopee-analytics'
+      path: '/shopee-analytics'
+      fullPath: '/shopee-analytics'
+      preLoaderRoute: typeof AuthenticatedShopeeAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/whatsapp/': {
+      id: '/_authenticated/whatsapp/'
+      path: '/whatsapp'
+      fullPath: '/whatsapp/'
+      preLoaderRoute: typeof AuthenticatedWhatsappIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/whatsapp/conexoes': {
+      id: '/_authenticated/whatsapp/conexoes'
+      path: '/whatsapp/conexoes'
+      fullPath: '/whatsapp/conexoes'
+      preLoaderRoute: typeof AuthenticatedWhatsappConexoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/whatsapp/configuracoes': {
+      id: '/_authenticated/whatsapp/configuracoes'
+      path: '/whatsapp/configuracoes'
+      fullPath: '/whatsapp/configuracoes'
+      preLoaderRoute: typeof AuthenticatedWhatsappConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/whatsapp/grupos': {
+      id: '/_authenticated/whatsapp/grupos'
+      path: '/whatsapp/grupos'
+      fullPath: '/whatsapp/grupos'
+      preLoaderRoute: typeof AuthenticatedWhatsappGruposRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/whatsapp/logs': {
+      id: '/_authenticated/whatsapp/logs'
+      path: '/whatsapp/logs'
+      fullPath: '/whatsapp/logs'
+      preLoaderRoute: typeof AuthenticatedWhatsappLogsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/whatsapp/publicacoes': {
+      id: '/_authenticated/whatsapp/publicacoes'
+      path: '/whatsapp/publicacoes'
+      fullPath: '/whatsapp/publicacoes'
+      preLoaderRoute: typeof AuthenticatedWhatsappPublicacoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -253,6 +393,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIntegracoesRoute: typeof AuthenticatedIntegracoesRoute
   AuthenticatedOfertasRoute: typeof AuthenticatedOfertasRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
+  AuthenticatedShopeeAnalyticsRoute: typeof AuthenticatedShopeeAnalyticsRoute
+  AuthenticatedWhatsappConexoesRoute: typeof AuthenticatedWhatsappConexoesRoute
+  AuthenticatedWhatsappConfiguracoesRoute: typeof AuthenticatedWhatsappConfiguracoesRoute
+  AuthenticatedWhatsappGruposRoute: typeof AuthenticatedWhatsappGruposRoute
+  AuthenticatedWhatsappLogsRoute: typeof AuthenticatedWhatsappLogsRoute
+  AuthenticatedWhatsappPublicacoesRoute: typeof AuthenticatedWhatsappPublicacoesRoute
+  AuthenticatedWhatsappIndexRoute: typeof AuthenticatedWhatsappIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -264,6 +411,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIntegracoesRoute: AuthenticatedIntegracoesRoute,
   AuthenticatedOfertasRoute: AuthenticatedOfertasRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
+  AuthenticatedShopeeAnalyticsRoute: AuthenticatedShopeeAnalyticsRoute,
+  AuthenticatedWhatsappConexoesRoute: AuthenticatedWhatsappConexoesRoute,
+  AuthenticatedWhatsappConfiguracoesRoute:
+    AuthenticatedWhatsappConfiguracoesRoute,
+  AuthenticatedWhatsappGruposRoute: AuthenticatedWhatsappGruposRoute,
+  AuthenticatedWhatsappLogsRoute: AuthenticatedWhatsappLogsRoute,
+  AuthenticatedWhatsappPublicacoesRoute: AuthenticatedWhatsappPublicacoesRoute,
+  AuthenticatedWhatsappIndexRoute: AuthenticatedWhatsappIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
