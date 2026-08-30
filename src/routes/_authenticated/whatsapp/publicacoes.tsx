@@ -153,7 +153,7 @@ function WhatsAppPublicacoesPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {queue.map((item) => {
-                  const statusInfo = STATUS_MAP[item.status] || STATUS_MAP.pending;
+                  const statusInfo = STATUS_MAP[item.status] || STATUS_MAP["pending"];
                   const isPending = item.status === "pending" || item.status === "scheduled" || item.status === "failed";
 
                   return (
@@ -168,8 +168,8 @@ function WhatsAppPublicacoesPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="outline" className={`text-[10px] uppercase font-semibold ${statusInfo.badgeClass}`}>
-                          {statusInfo.label}
+                        <Badge variant="outline" className={`text-[10px] uppercase font-semibold ${statusInfo?.badgeClass ?? ""}`}>
+                          {statusInfo?.label ?? item.status}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground font-mono text-[11px]">

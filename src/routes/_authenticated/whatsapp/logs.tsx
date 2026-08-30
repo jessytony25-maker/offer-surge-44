@@ -92,7 +92,7 @@ function WhatsAppLogsPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {logs.map((log) => {
-                  const statusInfo = LOG_STATUS_CONFIG[log.status] || LOG_STATUS_CONFIG.skipped;
+                  const statusInfo = LOG_STATUS_CONFIG[log.status] || LOG_STATUS_CONFIG["skipped"];
 
                   return (
                     <tr key={log.id} className="hover:bg-muted/20 transition-colors">
@@ -112,8 +112,8 @@ function WhatsAppLogsPage() {
                         {log.offer_title}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="outline" className={`text-[10px] uppercase font-semibold ${statusInfo.badgeClass}`}>
-                          {statusInfo.label}
+                        <Badge variant="outline" className={`text-[10px] uppercase font-semibold ${statusInfo?.badgeClass ?? ""}`}>
+                          {statusInfo?.label ?? log.status}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-center font-mono">
