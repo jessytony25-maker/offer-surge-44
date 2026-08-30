@@ -54,7 +54,7 @@ export const getDashboardStats = createServerFn({ method: "GET" })
 
     // 2. Processamento de Métricas
     const totalOffers = offersList.length;
-    const publishedTelegram = queueList.filter((q) => q.status === "published" || q.status === "sent").length;
+    const publishedTelegram = queueList.filter((q) => q.status === "published").length;
     const publishedWhatsApp = waQueueList.filter((q) => q.status === "sent" || q.status === "published").length;
     const totalPublished = publishedTelegram + publishedWhatsApp;
 
