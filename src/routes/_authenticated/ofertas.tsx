@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Tag, Sparkles, RefreshCw, Filter, ArrowUpDown } from "lucide-react";
+import { Tag, Sparkles, RefreshCw, Filter, ArrowUpDown, ExternalLink, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { OfferCard } from "@/components/offers/OfferCard";
@@ -22,15 +22,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { refreshTopSellers } from "@/lib/shopee.functions";
+import { syncMarketplace } from "@/lib/integrations.functions";
 
 export const Route = createFileRoute("/_authenticated/ofertas")({
   head: () => ({
     meta: [
       { title: `Ofertas e Mais Vendidos — ${BRAND.name}` },
-      { name: "description", content: "Produtos mais vendidos e ofertas capturadas com Oferta Score." },
+      { name: "description", content: "Produtos mais vendidos e ofertas capturadas com Links de Afiliados Oficiais." },
       { property: "og:title", content: `Ofertas e Mais Vendidos — ${BRAND.name}` },
-      { property: "og:description", content: "Produtos mais vendidos e ofertas capturadas com Oferta Score." },
+      { property: "og:description", content: "Produtos mais vendidos e ofertas com links de afiliados." },
     ],
   }),
   component: Ofertas,
@@ -44,7 +44,7 @@ function Ofertas() {
   const [minScore, setMinScore] = useState(0);
   const [sortBy, setSortBy] = useState<"score" | "discount" | "commission" | "price">("score");
 
-  const syncTopFn = useServerFn(refreshTopSellers);
+  const syncMarketplaceFn = useServerFn(syncMarketplace);
 
   // Busca ofertas do Supabase
   const { data: dbOffers = [], isLoading, refetch, isRefetching } = useQuery<DemoOffer[]>({
@@ -65,16 +65,16 @@ function Ofertas() {
         image: o.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400",
         marketplace: o.marketplace || "shopee",
         category: "geral",
-        previousPrice: o.price ? Math.round(o.price * (1 + (o.discount_pct || 20) / 100) * 100) / 100 : 0,
+        previousPrice: o.previous_price || (o.price ? Math.round(o.price * (1 + (o.discount_pct || 20) / 100) * 100) / 100 : 0),
         price: o.price || 0,
         discountPct: o.discount_pct || 0,
         rating: o.rating || 4.8,
         ratingCount: (o.sales_count || 100) * 2,
         salesCount: o.sales_count || 0,
-        coupon: null,
+        coupon: o.coupon || null,
         commission: o.commission || 0,
         commissionPct: o.commission_pct || 10,
-        freeShipping: true,
+        freeShipping: o.free_shipping ?? true,
         available: o.available ?? true,
         originalUrl: o.original_url || "https://shopee.com.br",
         affiliateUrl: o.affiliate_url || o.original_url,
@@ -85,9 +85,16 @@ function Ofertas() {
   });
 
   const syncMutation = useMutation({
-    mutationFn: async () => syncTopFn(),
+    mutationFn: async (targetMarketplace?: string) => {
+      const market = targetMarketplace && targetMarketplace !== "todos" ? targetMarketplace : "shopee";
+      return syncMarketplaceFn({ data: { marketplace: market as any } });
+    },
     onSuccess: (res) => {
-      toast.success(res.message);
+      if (res.ok) {
+        toast.success(res.message || "Ofertas sincronizadas com sucesso!");
+      } else {
+        toast.error(res.message || "Não foi possível sincronizar ofertas.");
+      }
       refetch();
       qc.invalidateQueries({ queryKey: ["offers"] });
     },
@@ -123,12 +130,12 @@ function Ofertas() {
     <div className="flex items-center gap-2">
       <Button
         size="sm"
-        onClick={() => syncMutation.mutate()}
+        onClick={() => syncMutation.mutate(marketplace)}
         disabled={syncMutation.isPending}
         className="gap-1.5 text-xs h-8 bg-amber-600 hover:bg-amber-700 text-white"
       >
         <Sparkles className="size-3.5" />
-        {syncMutation.isPending ? "Sincronizando..." : "Sincronizar Mais Vendidos"}
+        {syncMutation.isPending ? "Sincronizando..." : "↻ Sincronizar Ofertas Oficiais"}
       </Button>
 
       <Button
@@ -147,7 +154,7 @@ function Ofertas() {
   return (
     <AppShell
       title="Ofertas & Sugestões"
-      description="Levantamento contínuo dos produtos mais vendidos e ofertas com maior potencial de conversão"
+      description="Levantamento contínuo dos produtos mais vendidos com Links de Afiliados Oficiais e Oferta Score"
       actions={actions}
     >
       {/* BARRA DE FILTROS E PESQUISA */}
@@ -168,10 +175,10 @@ function Ofertas() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os Marketplaces</SelectItem>
-              <SelectItem value="shopee">Shopee (Top Vendas)</SelectItem>
-              <SelectItem value="mercadolivre">Mercado Livre</SelectItem>
-              <SelectItem value="amazon">Amazon</SelectItem>
-              <SelectItem value="shein">SHEIN</SelectItem>
+              <SelectItem value="shopee">Shopee (Open API)</SelectItem>
+              <SelectItem value="mercadolivre">Mercado Livre (MLB)</SelectItem>
+              <SelectItem value="amazon">Amazon (Associados)</SelectItem>
+              <SelectItem value="shein">SHEIN (Afiliados)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -190,56 +197,50 @@ function Ofertas() {
           </Select>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] text-muted-foreground">Score Mínimo:</span>
-            <Badge variant="secondary" className="text-[10px] font-mono">{minScore} pts</Badge>
+        <div className="flex flex-col justify-center gap-1">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Score Mínimo:</span>
+            <strong className="text-foreground">{minScore} pts</strong>
           </div>
           <Slider
             value={[minScore]}
-            onValueChange={([v]) => setMinScore(v ?? 0)}
-            max={100}
+            min={0}
+            max={90}
             step={5}
+            onValueChange={(v) => setMinScore(v[0] || 0)}
+            className="py-1"
           />
         </div>
       </div>
 
-      {/* STATS RÁPIDOS */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-xs text-muted-foreground">
-          Exibindo <strong>{filteredOffers.length}</strong> ofertas filtradas
-        </p>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-[11px]">
-            Shopee: {allAvailableOffers.filter((o) => o.marketplace === "shopee").length} itens
-          </Badge>
-          <Badge variant="outline" className="text-[11px]">
-            Mercado Livre: {allAvailableOffers.filter((o) => o.marketplace === "mercadolivre").length} itens
-          </Badge>
-        </div>
-      </div>
-
+      {/* RESULTADOS */}
       {isLoading ? (
-        <p className="text-sm text-muted-foreground py-12 text-center">Carregando produtos...</p>
+        <p className="text-sm text-muted-foreground py-12 text-center">Carregando ofertas...</p>
       ) : filteredOffers.length === 0 ? (
         <EmptyState
-          icon={<Tag className="size-6" />}
+          icon={Tag}
           title="Nenhuma oferta encontrada"
-          description="Clique no botão 'Sincronizar Mais Vendidos' para importar os produtos campeões de venda das lojas parceiras automaticamente."
+          description={
+            dbOffers.length === 0
+              ? "Conecte suas contas na aba Integrações e clique em 'Sincronizar Ofertas Oficiais' para carregar produtos com link de afiliado."
+              : "Nenhuma oferta corresponde aos filtros selecionados."
+          }
           action={
-            <Button
-              onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
-              size="sm"
-              className="gap-1.5 mt-2 bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              <Sparkles className="size-3.5" />
-              Sincronizar Mais Vendidos Agora
-            </Button>
+            dbOffers.length === 0 ? (
+              <Button
+                size="sm"
+                onClick={() => syncMutation.mutate("shopee")}
+                disabled={syncMutation.isPending}
+                className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                <Sparkles className="size-3.5" />
+                Sincronizar Ofertas Agora
+              </Button>
+            ) : undefined
           }
         />
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredOffers.map((offer) => (
             <OfferCard key={offer.id} offer={offer} />
           ))}

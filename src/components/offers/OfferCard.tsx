@@ -1,10 +1,11 @@
-import { Copy, ExternalLink, Star, Ticket, Truck } from "lucide-react";
+import { Copy, ExternalLink, Star, Ticket, Truck, Link2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import type { DemoOffer } from "@/lib/demo-data";
 import { brl, num, rating as fmtRating } from "@/lib/format";
 import { scoreLabel, scoreTone } from "@/lib/offer-score";
 import { generateCopy } from "@/lib/copy-generator";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { PublishDialog } from "@/components/offers/PublishDialog";
 
 const TONE: Record<string, string> = {
@@ -16,6 +17,8 @@ const TONE: Record<string, string> = {
 
 export function OfferCard({ offer }: { offer: DemoOffer }) {
   const tone = TONE[scoreTone(offer.score)] ?? TONE["low"];
+  const targetLink = offer.affiliateUrl || offer.originalUrl;
+  const isAffiliateLink = Boolean(offer.affiliateUrl && offer.affiliateUrl !== offer.originalUrl);
 
   const message = generateCopy(
     {
@@ -27,7 +30,7 @@ export function OfferCard({ offer }: { offer: DemoOffer }) {
       rating: offer.rating,
       salesCount: offer.salesCount,
       coupon: offer.coupon,
-      link: offer.affiliateUrl ?? offer.originalUrl,
+      link: targetLink,
     },
     { style: "promocional", length: "medio", emojis: true, detail: 4 },
   );
@@ -35,7 +38,7 @@ export function OfferCard({ offer }: { offer: DemoOffer }) {
   async function copyMessage() {
     try {
       await navigator.clipboard.writeText(message);
-      toast.success("Copy copiada para a área de transferência");
+      toast.success("Copy copiada com Link de Afiliado!");
     } catch {
       toast.error("Não foi possível copiar a mensagem");
     }
@@ -64,9 +67,18 @@ export function OfferCard({ offer }: { offer: DemoOffer }) {
               {offer.score}
             </span>
           </div>
-          <p className="mt-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-            {offer.marketplace} · {offer.category}
-          </p>
+
+          <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              {offer.marketplace} · {offer.category}
+            </p>
+            {isAffiliateLink && (
+              <Badge variant="outline" className="text-[9px] px-1 py-0 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-semibold gap-0.5">
+                <CheckCircle2 className="size-2.5" /> Afiliado Ativo
+              </Badge>
+            )}
+          </div>
+
           <div className="mt-1.5 flex flex-wrap items-baseline gap-2">
             <span className="text-base font-bold text-foreground">{brl(offer.price)}</span>
             <span className="text-xs text-muted-foreground line-through">
@@ -76,6 +88,7 @@ export function OfferCard({ offer }: { offer: DemoOffer }) {
               -{offer.discountPct}%
             </span>
           </div>
+
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <Star className="size-3" /> {fmtRating(offer.rating)} ({num(offer.ratingCount)})
@@ -95,13 +108,13 @@ export function OfferCard({ offer }: { offer: DemoOffer }) {
         </div>
       </div>
 
-      <div className="mt-auto flex gap-2 border-t border-border p-2">
-        <Button size="sm" variant="secondary" className="flex-1 gap-1" onClick={copyMessage}>
-          <Copy className="size-3.5" /> Copy
+      <div className="mt-auto flex items-center gap-2 border-t border-border p-2">
+        <Button size="sm" variant="secondary" className="flex-1 gap-1 text-xs" onClick={copyMessage}>
+          <Copy className="size-3.5" /> Copy com Afiliado
         </Button>
         <PublishDialog message={message} />
-        <Button size="sm" variant="ghost" asChild>
-          <a href={offer.originalUrl} target="_blank" rel="noreferrer noopener">
+        <Button size="sm" variant="ghost" asChild title="Abrir Link de Afiliado">
+          <a href={targetLink} target="_blank" rel="noreferrer noopener">
             <ExternalLink className="size-3.5" />
           </a>
         </Button>

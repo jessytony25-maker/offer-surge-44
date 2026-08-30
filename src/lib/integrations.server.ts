@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { CHANNEL_CONNECTORS, type ChannelPlatform } from "@/integrations/channels";
 import { MARKETPLACE_ADAPTERS, type MarketplaceSlug } from "@/integrations/marketplaces";
 import { computeOfferScore } from "@/lib/offer-score";
+import { AffiliateLinkResolver } from "@/lib/affiliate/AffiliateLinkResolver";
 
 export type IntegrationKind = "marketplace" | "channel";
 
@@ -161,7 +162,7 @@ export async function runTest(
 }
 
 /**
- * Sincroniza ofertas REAIS do marketplace para o banco de dados.
+ * Sincroniza ofertas REAIS do marketplace para o banco de dados e resolve os links de afiliados.
  * NUNCA injeta ofertas fictícias.
  */
 export async function syncMarketplaceOffers(
@@ -236,7 +237,23 @@ export async function syncMarketplaceOffers(
 
     const productId = prodData?.id;
 
-    // B. Calcula score da oferta
+    // B. Resolve o link de afiliado oficial usando o AffiliateLinkResolver
+    let finalAffiliateUrl = p.affiliateUrl || p.url || "";
+    if (p.url) {
+      const resolved = await AffiliateLinkResolver.resolve(supabase, {
+        userId,
+        originalUrl: p.url,
+        marketplace,
+        productId,
+        productTitle: p.title,
+      });
+
+      if (resolved.ok) {
+        finalAffiliateUrl = resolved.affiliateUrl;
+      }
+    }
+
+    // C. Calcula score da oferta
     const scoreResult = computeOfferScore({
       discountPct: p.discountPct,
       price: p.price,
@@ -247,7 +264,7 @@ export async function syncMarketplaceOffers(
       available: p.available,
     });
 
-    // C. Upsert na tabela de ofertas
+    // D. Upsert na tabela de ofertas
     const { data: offerData } = await supabase
       .from("offers")
       .upsert(
@@ -264,9 +281,9 @@ export async function syncMarketplaceOffers(
           sales_count: p.salesCount,
           commission: p.commission,
           commission_pct: p.commissionPct,
-          freeShipping: p.freeShipping || false,
+          free_shipping: p.freeShipping || false,
           original_url: p.url,
-          affiliate_url: p.affiliateUrl || p.url,
+          affiliate_url: finalAffiliateUrl,
           score: scoreResult.score,
           status: "new",
           updated_at: now,
@@ -276,7 +293,7 @@ export async function syncMarketplaceOffers(
       .select("id")
       .maybeSingle();
 
-    // D. Registra snapshot no histórico de preços
+    // E. Registra snapshot no histórico de preços
     if (productId || offerData?.id) {
       await supabase.from("offer_price_history").insert({
         user_id: userId,
