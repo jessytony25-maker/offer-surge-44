@@ -1,12 +1,45 @@
-import { Copy, ExternalLink, Star, Ticket, Truck, Link2, CheckCircle2 } from "lucide-react";
+import {
+  Copy,
+  ExternalLink,
+  Star,
+  Ticket,
+  Truck,
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+  Link2,
+  ShoppingBag,
+} from "lucide-react";
 import { toast } from "sonner";
-import type { DemoOffer } from "@/lib/demo-data";
-import { brl, num, rating as fmtRating } from "@/lib/format";
+import { brl, num, rating as fmtRating, dateTime } from "@/lib/format";
 import { scoreLabel, scoreTone } from "@/lib/offer-score";
 import { generateCopy } from "@/lib/copy-generator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PublishDialog } from "@/components/offers/PublishDialog";
+
+export interface RealOffer {
+  id: string;
+  title: string;
+  imageUrl?: string | null;
+  marketplace: string;
+  price: number;
+  previousPrice?: number | null;
+  discountPct?: number | null;
+  rating?: number | null;
+  ratingCount?: number | null;
+  salesCount?: number | null;
+  coupon?: string | null;
+  commission?: number | null;
+  commissionPct?: number | null;
+  freeShipping?: boolean;
+  available?: boolean;
+  originalUrl?: string | null;
+  affiliateUrl?: string | null;
+  score?: number | null;
+  status?: string | null;
+  updatedAt?: string | null;
+}
 
 const TONE: Record<string, string> = {
   hot: "bg-success/15 text-success border-success/30",
@@ -15,21 +48,40 @@ const TONE: Record<string, string> = {
   low: "bg-muted text-muted-foreground border-border",
 };
 
-export function OfferCard({ offer }: { offer: DemoOffer }) {
-  const tone = TONE[scoreTone(offer.score)] ?? TONE["low"];
-  const targetLink = offer.affiliateUrl || offer.originalUrl;
-  const isAffiliateLink = Boolean(offer.affiliateUrl && offer.affiliateUrl !== offer.originalUrl);
+const MARKETPLACE_LABEL: Record<string, string> = {
+  shopee: "Shopee",
+  mercadolivre: "Mercado Livre",
+  amazon: "Amazon",
+  shein: "SHEIN",
+};
+
+const MARKETPLACE_COLOR: Record<string, string> = {
+  shopee: "border-orange-500/30 bg-orange-500/10 text-orange-600",
+  mercadolivre: "border-yellow-500/30 bg-yellow-500/10 text-yellow-700",
+  amazon: "border-amber-600/30 bg-amber-600/10 text-amber-700",
+  shein: "border-pink-500/30 bg-pink-500/10 text-pink-600",
+};
+
+export function OfferCard({ offer }: { offer: RealOffer }) {
+  const score = offer.score ?? 0;
+  const tone = TONE[scoreTone(score)] ?? TONE["low"];
+
+  // Prioridade total: link de afiliado real > link original
+  const hasAffiliate =
+    Boolean(offer.affiliateUrl) && offer.affiliateUrl !== offer.originalUrl;
+  const targetLink = offer.affiliateUrl || offer.originalUrl || "#";
+  const affiliateStatus = hasAffiliate ? "active" : offer.affiliateUrl ? "same" : "missing";
 
   const message = generateCopy(
     {
       title: offer.title,
       marketplace: offer.marketplace,
       price: offer.price,
-      previousPrice: offer.previousPrice,
-      discountPct: offer.discountPct,
-      rating: offer.rating,
-      salesCount: offer.salesCount,
-      coupon: offer.coupon,
+      previousPrice: offer.previousPrice ?? undefined,
+      discountPct: offer.discountPct ?? undefined,
+      rating: offer.rating ?? undefined,
+      salesCount: offer.salesCount ?? undefined,
+      coupon: offer.coupon ?? undefined,
       link: targetLink,
     },
     { style: "promocional", length: "medio", emojis: true, detail: 4 },
@@ -38,82 +90,169 @@ export function OfferCard({ offer }: { offer: DemoOffer }) {
   async function copyMessage() {
     try {
       await navigator.clipboard.writeText(message);
-      toast.success("Copy copiada com Link de Afiliado!");
+      toast.success("Copy copiada com link de afiliado!");
     } catch {
       toast.error("Não foi possível copiar a mensagem");
     }
   }
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-      <div className="flex gap-3 p-3">
+    <article className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm hover:shadow-md transition-shadow">
+      {/* IMAGEM */}
+      <div className="relative bg-muted/30">
         <img
-          src={offer.image}
+          src={offer.imageUrl || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400"}
           alt={offer.title}
           loading="lazy"
-          width={512}
-          height={512}
-          className="size-20 shrink-0 rounded-lg object-cover sm:size-24"
+          className="h-44 w-full object-cover"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).src =
+              "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400";
+          }}
         />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="line-clamp-2 text-sm font-semibold text-foreground">
-              {offer.title}
-            </h3>
-            <span
-              className={`shrink-0 rounded-md border px-2 py-1 text-xs font-bold ${tone}`}
-              title={scoreLabel(offer.score)}
-            >
-              {offer.score}
+        {/* Badge marketplace */}
+        <span
+          className={`absolute top-2 left-2 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${
+            MARKETPLACE_COLOR[offer.marketplace] ?? "border-border bg-muted text-muted-foreground"
+          }`}
+        >
+          {MARKETPLACE_LABEL[offer.marketplace] ?? offer.marketplace}
+        </span>
+        {/* Oferta Score */}
+        {score > 0 && (
+          <span
+            className={`absolute top-2 right-2 rounded-md border px-2 py-0.5 text-xs font-bold ${tone}`}
+            title={scoreLabel(score)}
+          >
+            {score}
+          </span>
+        )}
+      </div>
+
+      {/* CONTEÚDO */}
+      <div className="flex flex-1 flex-col p-3 space-y-2">
+        {/* Título */}
+        <h3 className="line-clamp-2 text-sm font-semibold text-foreground leading-snug">
+          {offer.title}
+        </h3>
+
+        {/* Preços */}
+        <div className="flex flex-wrap items-baseline gap-2">
+          <span className="text-lg font-bold text-foreground">{brl(offer.price)}</span>
+          {offer.previousPrice && offer.previousPrice > offer.price && (
+            <>
+              <span className="text-xs text-muted-foreground line-through">
+                {brl(offer.previousPrice)}
+              </span>
+              {offer.discountPct && offer.discountPct > 0 && (
+                <span className="rounded bg-success/15 px-1.5 py-0.5 text-[11px] font-bold text-success">
+                  -{offer.discountPct}%
+                </span>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Metadados */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+          {offer.rating != null && (
+            <span className="inline-flex items-center gap-1">
+              <Star className="size-3 text-amber-500" />
+              {fmtRating(offer.rating)}
+              {offer.ratingCount != null && ` (${num(offer.ratingCount)})`}
             </span>
+          )}
+          {offer.commission != null && offer.commission > 0 && (
+            <span className="font-medium text-emerald-600">
+              +{brl(offer.commission)} comissão
+            </span>
+          )}
+          {offer.freeShipping && (
+            <span className="inline-flex items-center gap-0.5 text-sky-600">
+              <Truck className="size-3" /> Frete grátis
+            </span>
+          )}
+          {offer.coupon && (
+            <span className="inline-flex items-center gap-0.5 text-purple-600 font-mono font-bold">
+              <Ticket className="size-3" /> {offer.coupon}
+            </span>
+          )}
+        </div>
+
+        {/* SEÇÃO DE LINKS — mostrar ambos claramente */}
+        <div className="rounded-lg border border-border bg-muted/30 p-2 space-y-1.5 text-[11px]">
+          {/* Link original */}
+          <div className="flex items-center gap-1.5">
+            <ShoppingBag className="size-3 text-muted-foreground shrink-0" />
+            <span className="text-muted-foreground">Original:</span>
+            <a
+              href={offer.originalUrl || "#"}
+              target="_blank"
+              rel="noreferrer"
+              className="truncate text-primary hover:underline"
+            >
+              {offer.originalUrl
+                ? new URL(offer.originalUrl).hostname
+                : "—"}
+            </a>
           </div>
 
-          <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              {offer.marketplace} · {offer.category}
-            </p>
-            {isAffiliateLink && (
-              <Badge variant="outline" className="text-[9px] px-1 py-0 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-semibold gap-0.5">
-                <CheckCircle2 className="size-2.5" /> Afiliado Ativo
-              </Badge>
+          {/* Link de afiliado */}
+          <div className="flex items-center gap-1.5">
+            <Link2 className="size-3 shrink-0" />
+            <span className="text-muted-foreground">Afiliado:</span>
+            {affiliateStatus === "active" ? (
+              <a
+                href={offer.affiliateUrl!}
+                target="_blank"
+                rel="noreferrer"
+                className="truncate text-emerald-600 font-semibold hover:underline flex items-center gap-0.5"
+              >
+                <CheckCircle2 className="size-3 shrink-0" />
+                Link ativo
+              </a>
+            ) : affiliateStatus === "same" ? (
+              <span className="text-amber-600 flex items-center gap-0.5">
+                <AlertTriangle className="size-3 shrink-0" />
+                Mesmo que original
+              </span>
+            ) : (
+              <span className="text-destructive flex items-center gap-0.5">
+                <AlertTriangle className="size-3 shrink-0" />
+                Não gerado — configure a integração
+              </span>
             )}
           </div>
 
-          <div className="mt-1.5 flex flex-wrap items-baseline gap-2">
-            <span className="text-base font-bold text-foreground">{brl(offer.price)}</span>
-            <span className="text-xs text-muted-foreground line-through">
-              {brl(offer.previousPrice)}
-            </span>
-            <span className="rounded bg-success/15 px-1.5 py-0.5 text-[11px] font-semibold text-success">
-              -{offer.discountPct}%
-            </span>
-          </div>
-
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <Star className="size-3" /> {fmtRating(offer.rating)} ({num(offer.ratingCount)})
-            </span>
-            <span>Comissão {brl(offer.commission)}</span>
-            {offer.freeShipping ? (
-              <span className="inline-flex items-center gap-1">
-                <Truck className="size-3" /> Frete grátis
-              </span>
-            ) : null}
-            {offer.coupon ? (
-              <span className="inline-flex items-center gap-1">
-                <Ticket className="size-3" /> {offer.coupon}
-              </span>
-            ) : null}
-          </div>
+          {/* Data de sincronização */}
+          {offer.updatedAt && (
+            <div className="flex items-center gap-1.5 text-muted-foreground/70">
+              <Clock className="size-3 shrink-0" />
+              Sync: {dateTime(offer.updatedAt)}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="mt-auto flex items-center gap-2 border-t border-border p-2">
-        <Button size="sm" variant="secondary" className="flex-1 gap-1 text-xs" onClick={copyMessage}>
-          <Copy className="size-3.5" /> Copy com Afiliado
+      {/* AÇÕES */}
+      <div className="flex items-center gap-1.5 border-t border-border p-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          className="flex-1 gap-1 text-xs h-8"
+          onClick={copyMessage}
+        >
+          <Copy className="size-3.5" />
+          Copy
         </Button>
         <PublishDialog message={message} />
-        <Button size="sm" variant="ghost" asChild title="Abrir Link de Afiliado">
+        <Button
+          size="sm"
+          variant="ghost"
+          asChild
+          className="h-8 px-2"
+          title={hasAffiliate ? "Abrir link de afiliado" : "Abrir link original"}
+        >
           <a href={targetLink} target="_blank" rel="noreferrer noopener">
             <ExternalLink className="size-3.5" />
           </a>
