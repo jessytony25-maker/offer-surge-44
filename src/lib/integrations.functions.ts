@@ -6,8 +6,10 @@ import {
   isValidProvider,
   mergeCredentials,
   runTest,
+  syncMarketplaceOffers,
   type IntegrationKind,
 } from "@/lib/integrations.server";
+import { MARKETPLACE_ADAPTERS, type MarketplaceSlug } from "@/integrations/marketplaces";
 
 const targetSchema = z.object({
   kind: z.enum(["marketplace", "channel"]),
@@ -60,7 +62,7 @@ export const listIntegrations = createServerFn({ method: "GET" })
 
 export const saveIntegration = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => saveSchema.parse(input))
+  .validator((input: unknown) => saveSchema.parse(input))
   .handler(async ({ data, context }) => {
     const kind = data.kind as IntegrationKind;
     if (!isValidProvider(kind, data.provider)) throw new Error("Integração desconhecida");
@@ -120,7 +122,7 @@ export const saveIntegration = createServerFn({ method: "POST" })
 
 export const disconnectIntegration = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => targetSchema.parse(input))
+  .validator((input: unknown) => targetSchema.parse(input))
   .handler(async ({ data, context }) => {
     const kind = data.kind as IntegrationKind;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -143,4 +145,65 @@ export const disconnectIntegration = createServerFn({ method: "POST" })
         .eq("marketplace", data.provider);
     }
     return { ok: true };
+  });
+
+/**
+ * Dispara a sincronização real de ofertas de um marketplace.
+ */
+export const syncMarketplace = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { marketplace: string }) =>
+    z.object({ marketplace: z.enum(["shopee", "mercadolivre", "amazon", "shein"]) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    return syncMarketplaceOffers(context.supabase, context.userId, data.marketplace as MarketplaceSlug);
+  });
+
+/**
+ * Converte um link original em link de afiliado usando as credenciais do usuário.
+ */
+export const buildAffiliateLinkFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { originalUrl: string; subId?: string }) =>
+    z
+      .object({
+        originalUrl: z.string().url("URL inválida"),
+        subId: z.string().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { originalUrl, subId } = data;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Identifica o marketplace da URL
+    let foundSlug: MarketplaceSlug | null = null;
+    for (const [slug, adapter] of Object.entries(MARKETPLACE_ADAPTERS)) {
+      if (adapter.matchesUrl(originalUrl)) {
+        foundSlug = slug as MarketplaceSlug;
+        break;
+      }
+    }
+
+    if (!foundSlug) {
+      return { ok: false, error: "Marketplace da URL não identificado." };
+    }
+
+    const adapter = MARKETPLACE_ADAPTERS[foundSlug];
+    const { data: credRow } = await supabaseAdmin
+      .from("integration_credentials")
+      .select("credentials")
+      .eq("user_id", context.userId)
+      .eq("kind", "marketplace")
+      .eq("provider", foundSlug)
+      .maybeSingle();
+
+    const creds = (credRow?.credentials ?? {}) as Record<string, string>;
+    const res = await adapter.buildAffiliateLink(originalUrl, creds, subId);
+
+    if (!res.ok) {
+      return { ok: false, error: res.message };
+    }
+
+    return { ok: true, affiliateUrl: res.data, marketplace: foundSlug };
   });

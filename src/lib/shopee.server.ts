@@ -47,7 +47,7 @@ export async function shopeeGraphql<T>(
       errors?: { message?: string; extensions?: { message?: string } }[];
     };
     if (!res.ok) {
-      return { ok: false, message: `Shopee respondeu ${res.status}.` };
+      return { ok: false, message: `Shopee respondeu HTTP ${res.status}.` };
     }
     if (json.errors?.length) {
       const first = json.errors[0];
@@ -58,8 +58,8 @@ export async function shopeeGraphql<T>(
     }
     if (!json.data) return { ok: false, message: "Resposta vazia da Shopee." };
     return { ok: true, data: json.data };
-  } catch {
-    return { ok: false, message: "Falha ao contatar a API da Shopee." };
+  } catch (err: any) {
+    return { ok: false, message: `Falha ao contatar a API da Shopee: ${err.message || "Erro de rede"}` };
   }
 }
 
@@ -108,6 +108,51 @@ export async function shopeeTopSellers(creds: ShopeeCreds, limit = 20) {
     creds,
     TOP_PRODUCTS_QUERY,
     { limit },
+  );
+}
+
+const SEARCH_PRODUCTS_QUERY = `
+query searchProducts($keyword: String, $page: Int, $limit: Int) {
+  productOfferV2(keyword: $keyword, page: $page, limit: $limit, sortType: 2) {
+    nodes {
+      itemId
+      productName
+      imageUrl
+      offerLink
+      productLink
+      price
+      priceMin
+      priceMax
+      sales
+      ratingStar
+      commissionRate
+      commission
+      shopName
+      priceDiscountRate
+    }
+  }
+}`;
+
+export async function shopeeSearchProducts(creds: ShopeeCreds, keyword?: string, limit = 20) {
+  return shopeeGraphql<{ productOfferV2: { nodes: ShopeeOfferNode[] } }>(
+    creds,
+    SEARCH_PRODUCTS_QUERY,
+    { keyword: keyword || "", limit, page: 1 },
+  );
+}
+
+const GENERATE_SHORT_LINK_MUTATION = `
+mutation generateShortLink($originUrl: String!, $subIds: [String]) {
+  generateShortLink(input: { originUrl: $originUrl, subIds: $subIds }) {
+    shortLink
+  }
+}`;
+
+export async function shopeeGenerateShortLink(creds: ShopeeCreds, originUrl: string, subId?: string) {
+  return shopeeGraphql<{ generateShortLink: { shortLink: string } }>(
+    creds,
+    GENERATE_SHORT_LINK_MUTATION,
+    { originUrl, subIds: subId ? [subId] : [] },
   );
 }
 
@@ -167,7 +212,7 @@ export async function shopeeConversions(
   }>(creds, CONVERSION_QUERY, { start: startSec, end: endSec, page });
 }
 
-/** Teste de conexão barato: pede 1 oferta. */
+/** Teste de conexão: consulta 1 oferta na API. */
 export async function shopeeTestConnection(creds: ShopeeCreds) {
   return shopeeGraphql<{ productOfferV2: { nodes: ShopeeOfferNode[] } }>(
     creds,

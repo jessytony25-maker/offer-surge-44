@@ -1,10 +1,9 @@
 /**
  * Camada de integração com marketplaces.
  *
- * Interface padronizada que TODA integração deve implementar. Nenhum endpoint é
- * inventado aqui: enquanto as credenciais oficiais da API não estiverem
- * configuradas, o adaptador responde `not_configured` e a interface mostra
- * "Integração aguardando configuração".
+ * Interface padronizada que toda integração de marketplace implementa.
+ * Realiza autenticação, validação de credenciais, busca de ofertas reais,
+ * normalização e conversão de links de afiliados.
  */
 
 export type MarketplaceSlug = "shopee" | "mercadolivre" | "amazon" | "shein";
@@ -14,7 +13,6 @@ export type IntegrationState = "not_configured" | "pending" | "connected" | "err
 export interface CredentialField {
   key: string;
   label: string;
-  /** Campos secretos nunca são exibidos novamente após serem salvos. */
   secret?: boolean;
   required?: boolean;
   help?: string;
@@ -25,16 +23,18 @@ export interface NormalizedProduct {
   title: string;
   imageUrl?: string;
   url?: string;
+  affiliateUrl?: string;
   sku?: string;
   category?: string;
-  price?: number;
-  previousPrice?: number;
+  price: number;
+  previousPrice?: number | null;
   discountPct?: number;
-  rating?: number;
-  ratingCount?: number;
-  salesCount?: number;
-  coupon?: string;
-  commissionPct?: number;
+  rating?: number | null;
+  ratingCount?: number | null;
+  salesCount?: number | null;
+  coupon?: string | null;
+  commission?: number | null;
+  commissionPct?: number | null;
   freeShipping?: boolean;
   available?: boolean;
 }
@@ -54,12 +54,9 @@ export interface SearchParams {
 export interface MarketplaceAdapter {
   slug: MarketplaceSlug;
   name: string;
-  /** Programa oficial de afiliados / API usada quando configurada. */
   program: string;
-  /** Documentação oficial para o usuário obter as credenciais. */
   docsUrl?: string;
   credentialFields: CredentialField[];
-  /** Recursos que a API oficial permite. */
   capabilities: {
     searchProducts: boolean;
     listOffers: boolean;
@@ -71,15 +68,28 @@ export interface MarketplaceAdapter {
     linkConversion: boolean;
     sync: boolean;
   };
-  searchProducts(params: SearchParams): Promise<AdapterResult<NormalizedProduct[]>>;
-  listOffers(params: SearchParams): Promise<AdapterResult<NormalizedProduct[]>>;
-  getProduct(externalId: string): Promise<AdapterResult<NormalizedProduct>>;
+  testConnection(credentials: Record<string, string>): Promise<AdapterResult<{ message: string }>>;
+  searchProducts(
+    credentials: Record<string, string>,
+    params?: SearchParams,
+  ): Promise<AdapterResult<NormalizedProduct[]>>;
+  listOffers(
+    credentials: Record<string, string>,
+    params?: SearchParams,
+  ): Promise<AdapterResult<NormalizedProduct[]>>;
+  getProduct(
+    externalId: string,
+    credentials: Record<string, string>,
+  ): Promise<AdapterResult<NormalizedProduct>>;
   buildAffiliateLink(
     originalUrl: string,
     credentials: Record<string, string>,
+    subId?: string,
   ): Promise<AdapterResult<string>>;
-  sync(): Promise<AdapterResult<{ imported: number; at: string }>>;
-  /** Reconhece se uma URL pertence a este marketplace. */
+  syncOffers(
+    credentials: Record<string, string>,
+    params?: SearchParams,
+  ): Promise<AdapterResult<{ products: NormalizedProduct[]; total: number }>>;
   matchesUrl(url: string): boolean;
 }
 

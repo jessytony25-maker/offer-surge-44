@@ -1,9 +1,11 @@
 /**
- * Helpers server-only para configuração de integrações.
+ * Helpers server-only para configuração e sincronização de integrações.
  * As credenciais nunca voltam para o cliente: apenas a lista de chaves preenchidas.
  */
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { CHANNEL_CONNECTORS, type ChannelPlatform } from "@/integrations/channels";
 import { MARKETPLACE_ADAPTERS, type MarketplaceSlug } from "@/integrations/marketplaces";
+import { computeOfferScore } from "@/lib/offer-score";
 
 export type IntegrationKind = "marketplace" | "channel";
 
@@ -98,7 +100,7 @@ async function testTelegram(creds: Record<string, string>): Promise<TestOutcome>
   }
 }
 
-async function testWhatsApp(creds: Record<string, string>): Promise<TestOutcome> {
+async function testWhatsAppMeta(creds: Record<string, string>): Promise<TestOutcome> {
   const token = creds["access_token"];
   const phoneId = creds["phone_number_id"];
   if (!token || !phoneId) {
@@ -116,13 +118,16 @@ async function testWhatsApp(creds: Record<string, string>): Promise<TestOutcome>
     }
     return {
       status: "connected",
-      message: `Conectado: ${String(json["verified_name"] ?? "")} (${String(json["display_phone_number"] ?? "")}). Lembrando: a API oficial não envia para grupos.`,
+      message: `Conectado: ${String(json["verified_name"] ?? "")} (${String(json["display_phone_number"] ?? "")}).`,
     };
   } catch {
     return { status: "error", message: "Falha ao contatar a API da Meta." };
   }
 }
 
+/**
+ * Valida de forma real as credenciais com o provedor correspondente.
+ */
 export async function runTest(
   kind: IntegrationKind,
   provider: string,
@@ -130,55 +135,194 @@ export async function runTest(
 ): Promise<TestOutcome> {
   if (kind === "channel") {
     if (provider === "telegram") return testTelegram(creds);
-    if (provider === "whatsapp") return testWhatsApp(creds);
-    return { status: "pending", message: "Canal sem verificação automática." };
+    if (provider === "whatsapp") return testWhatsAppMeta(creds);
+    return { status: "pending", message: "Canal salvo." };
   }
 
-  const fields = fieldsFor(kind, provider);
-  const missing = fields
-    .filter((f) => f.required && !creds[f.key])
-    .map((f) => f.label);
-  if (missing.length) {
-    return { status: "error", message: `Faltam credenciais: ${missing.join(", ")}.` };
+  const adapter = MARKETPLACE_ADAPTERS[provider as MarketplaceSlug];
+  if (!adapter) {
+    return { status: "error", message: "Marketplace desconhecido." };
   }
 
-  if (provider === "shopee") {
-    const appId = creds["api_key"];
-    const secret = creds["api_secret"];
-    if (appId && secret) {
-      try {
-        const { shopeeTestConnection } = await import("@/lib/shopee.server");
-        const res = await shopeeTestConnection({ appId, secret });
-        if (res.ok) {
-          return {
-            status: "connected",
-            message: "Conectado com sucesso à Shopee Open API Oficial!",
-          };
-        }
-        return {
-          status: "error",
-          message: res.message || "Shopee recusou o App ID ou Senha da API. Verifique os dados no painel da Open API.",
-        };
-      } catch {
-        return {
-          status: "connected",
-          message: "Credenciais da Shopee salvas com sucesso!",
-        };
-      }
-    }
-  }
+  // Executa validação oficial do adaptador
+  const testRes = await adapter.testConnection(creds);
 
-  const hasApi = Boolean(creds["api_key"] && creds["api_secret"]);
-  if (!hasApi) {
+  if (!testRes.ok) {
     return {
-      status: "connected",
-      message:
-        "Credenciais salvas. Já dá para gerar links de afiliado; a captura automática via API entra em ação quando você preencher as credenciais opcionais da API.",
+      status: testRes.state === "not_configured" ? "pending" : "error",
+      message: testRes.message,
     };
   }
+
   return {
     status: "connected",
-    message:
-      "Credenciais salvas e verificadas com sucesso!",
+    message: testRes.data.message || `Conexão com ${adapter.name} validada com sucesso!`,
+  };
+}
+
+/**
+ * Sincroniza ofertas REAIS do marketplace para o banco de dados.
+ * NUNCA injeta ofertas fictícias.
+ */
+export async function syncMarketplaceOffers(
+  supabase: SupabaseClient,
+  userId: string,
+  marketplace: MarketplaceSlug,
+): Promise<{ ok: boolean; message?: string; total?: number; imported?: number; at?: string }> {
+  const adapter = MARKETPLACE_ADAPTERS[marketplace];
+  if (!adapter) {
+    return { ok: false, message: "Marketplace não suportado." };
+  }
+
+  // 1. Busca credenciais no banco
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: credRow } = await supabaseAdmin
+    .from("integration_credentials")
+    .select("credentials")
+    .eq("user_id", userId)
+    .eq("kind", "marketplace")
+    .eq("provider", marketplace)
+    .maybeSingle();
+
+  const creds = (credRow?.credentials ?? {}) as Record<string, string>;
+
+  // 2. Executa a sincronização real no marketplace
+  const syncResult = await adapter.syncOffers(creds);
+
+  if (!syncResult.ok) {
+    await supabase
+      .from("marketplace_connections")
+      .upsert(
+        {
+          user_id: userId,
+          marketplace,
+          status: syncResult.state,
+          last_error: syncResult.message,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,marketplace" },
+      );
+
+    return { ok: false, message: syncResult.message };
+  }
+
+  const products = syncResult.data.products;
+  const now = new Date().toISOString();
+  let importedCount = 0;
+
+  for (const p of products) {
+    if (!p.title || p.price <= 0) continue;
+
+    // A. Upsert no catálogo de produtos
+    const { data: prodData } = await supabase
+      .from("products")
+      .upsert(
+        {
+          user_id: userId,
+          marketplace,
+          external_id: p.externalId || `ext_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          title: p.title,
+          image_url: p.imageUrl,
+          url: p.url,
+          price: p.price,
+          rating: p.rating,
+          sales_count: p.salesCount,
+          updated_at: now,
+        },
+        { onConflict: "user_id,marketplace,external_id" as any },
+      )
+      .select("id")
+      .maybeSingle();
+
+    const productId = prodData?.id;
+
+    // B. Calcula score da oferta
+    const scoreResult = computeOfferScore({
+      discountPct: p.discountPct,
+      price: p.price,
+      rating: p.rating,
+      salesCount: p.salesCount,
+      commissionPct: p.commissionPct,
+      freeShipping: p.freeShipping,
+      available: p.available,
+    });
+
+    // C. Upsert na tabela de ofertas
+    const { data: offerData } = await supabase
+      .from("offers")
+      .upsert(
+        {
+          user_id: userId,
+          product_id: productId || null,
+          marketplace,
+          title: p.title,
+          image_url: p.imageUrl,
+          price: p.price,
+          previous_price: p.previousPrice,
+          discount_pct: p.discountPct || 0,
+          rating: p.rating,
+          sales_count: p.salesCount,
+          commission: p.commission,
+          commission_pct: p.commissionPct,
+          freeShipping: p.freeShipping || false,
+          original_url: p.url,
+          affiliate_url: p.affiliateUrl || p.url,
+          score: scoreResult.score,
+          status: "new",
+          updated_at: now,
+        },
+        { onConflict: "user_id,marketplace,title" as any },
+      )
+      .select("id")
+      .maybeSingle();
+
+    // D. Registra snapshot no histórico de preços
+    if (productId || offerData?.id) {
+      await supabase.from("offer_price_history").insert({
+        user_id: userId,
+        product_id: productId || null,
+        offer_id: offerData?.id || null,
+        marketplace,
+        price: p.price,
+        promo_price: p.price,
+        original_price: p.previousPrice,
+        coupon: p.coupon,
+        free_shipping: p.freeShipping || false,
+        available: p.available ?? true,
+        captured_at: now,
+      });
+    }
+
+    importedCount++;
+  }
+
+  // 3. Atualiza status da conexão para conectado com sucesso
+  await supabase.from("marketplace_connections").upsert(
+    {
+      user_id: userId,
+      marketplace,
+      status: "connected",
+      last_sync_at: now,
+      last_error: null,
+      updated_at: now,
+    },
+    { onConflict: "user_id,marketplace" },
+  );
+
+  // 4. Registra auditoria
+  await supabase.from("audit_logs").insert({
+    user_id: userId,
+    channel: "marketplace_sync",
+    action: `sync_${marketplace}`,
+    entity: "offers",
+    meta: { total: products.length, imported: importedCount, at: now },
+  });
+
+  return {
+    ok: true,
+    message: `${importedCount} ofertas reais sincronizadas da ${adapter.name}!`,
+    total: products.length,
+    imported: importedCount,
+    at: now,
   };
 }
