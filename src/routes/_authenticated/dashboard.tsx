@@ -119,7 +119,7 @@ function Dashboard() {
       {!hasRealData ? (
         <div className="py-12">
           <EmptyState
-            icon={Tag}
+            icon={<Tag className="size-6 text-muted-foreground/60" />}
             title="Nenhum dado real disponível ainda"
             description="Sincronize suas integrações conectadas para importar produtos e ofertas reais para o catálogo."
             action={
