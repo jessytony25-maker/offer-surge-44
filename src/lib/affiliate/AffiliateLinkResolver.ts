@@ -165,6 +165,17 @@ export class AffiliateLinkResolver {
         },
       });
 
+      if (offerId) {
+        await supabase
+          .from("offers")
+          .update({
+            affiliate_status: "failed",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", offerId)
+          .eq("user_id", userId);
+      }
+
       return {
         ok: false,
         originalUrl: cleanUrl,
@@ -202,6 +213,7 @@ export class AffiliateLinkResolver {
         .from("offers")
         .update({
           affiliate_url: affiliateUrl,
+          affiliate_status: "resolved",
           updated_at: now,
         })
         .eq("id", offerId)

@@ -6,10 +6,10 @@ import {
   isValidProvider,
   mergeCredentials,
   runTest,
-  syncMarketplaceOffers,
   type IntegrationKind,
 } from "@/lib/integrations.server";
 import { MARKETPLACE_ADAPTERS, type MarketplaceSlug } from "@/integrations/marketplaces";
+import { MarketplaceSyncEngine } from "@/lib/sync/MarketplaceSyncEngine";
 
 const targetSchema = z.object({
   kind: z.enum(["marketplace", "channel"]),
@@ -31,7 +31,7 @@ export const listIntegrations = createServerFn({ method: "GET" })
         .eq("user_id", context.userId),
       context.supabase
         .from("marketplace_connections")
-        .select("marketplace, status, last_error, last_sync_at"),
+        .select("marketplace, status, last_error, last_sync_at, auto_sync_interval"),
       context.supabase
         .from("channel_connections")
         .select("platform, status, last_error, last_test_at"),
@@ -48,6 +48,7 @@ export const listIntegrations = createServerFn({ method: "GET" })
         status: m.status,
         lastError: m.last_error,
         lastEventAt: m.last_sync_at,
+        autoSyncInterval: (m as any).auto_sync_interval || "disabled",
         filledKeys: keysFor("marketplace", m.marketplace),
       })),
       channels: (channels.data ?? []).map((c) => ({
@@ -148,7 +149,7 @@ export const disconnectIntegration = createServerFn({ method: "POST" })
   });
 
 /**
- * Dispara a sincronização real de ofertas de um marketplace.
+ * Dispara a sincronização real de ofertas de um marketplace utilizando a sync engine robusta.
  */
 export const syncMarketplace = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -156,7 +157,19 @@ export const syncMarketplace = createServerFn({ method: "POST" })
     z.object({ marketplace: z.enum(["shopee", "mercadolivre", "amazon", "shein"]) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    return syncMarketplaceOffers(context.supabase, context.userId, data.marketplace as MarketplaceSlug);
+    const res = await MarketplaceSyncEngine.sync(
+      context.supabase,
+      context.userId,
+      data.marketplace as MarketplaceSlug,
+    );
+    return {
+      ok: res.ok,
+      message: res.lastError || `Sincronização concluída com sucesso para ${data.marketplace}!`,
+      imported: res.itemsImported,
+      total: res.itemsFound,
+      skipped: res.itemsSkipped,
+      updated: res.itemsUpdated,
+    };
   });
 
 /**
