@@ -19,7 +19,7 @@ import {
 
 import { AppShell } from "@/components/layout/AppShell";
 import { BRAND } from "@/lib/branding";
-import { MARKETPLACE_ADAPTERS } from "@/integrations/marketplaces";
+import { MARKETPLACE_ADAPTERS, type MarketplaceSlug } from "@/integrations/marketplaces";
 import { CHANNEL_CONNECTORS } from "@/integrations/channels";
 import {
   listIntegrations,
