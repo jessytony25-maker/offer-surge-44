@@ -240,15 +240,25 @@ function WhatsAppGruposPage() {
               : "Nenhum grupo atende aos filtros de pesquisa atuais."}
           </p>
           {groups.length === 0 && (
-            <Button
-              size="sm"
-              onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
-              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white mt-2"
-            >
-              <RefreshCw className="size-3.5" />
-              Sincronizar Grupos Agora
-            </Button>
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                asChild
+                className="gap-1.5 text-xs"
+              >
+                <a href="/whatsapp/conexoes">Conectar WhatsApp</a>
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending}
+                className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+              >
+                <RefreshCw className="size-3.5" />
+                Sincronizar Grupos Reais
+              </Button>
+            </div>
           )}
         </div>
       ) : (

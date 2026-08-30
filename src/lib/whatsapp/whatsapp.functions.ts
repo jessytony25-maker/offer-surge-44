@@ -9,7 +9,7 @@ import type {
   WhatsAppSettingsDto,
 } from "./types";
 
-/** 1. Obtém ou cria a sessão de conexão do WhatsApp */
+/** 1. Obtém ou inicializa a sessão de conexão do WhatsApp */
 export const getWhatsAppConnection = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<WhatsAppConnectionDto> => {
@@ -17,21 +17,50 @@ export const getWhatsAppConnection = createServerFn({ method: "GET" })
     return getOrCreateSession(context.supabase, context.userId);
   });
 
-/** 2. Confirma o escaneamento do QR Code */
-export const confirmWhatsAppScan = createServerFn({ method: "POST" })
+/** 2. Consulta o status real no gateway e atualiza a conexão caso o usuário tenha escaneado */
+export const checkWhatsAppStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ connectionId: z.string() }).parse(input),
-  )
+  .validator((input: { connectionId?: string }) => input)
   .handler(async ({ data, context }): Promise<WhatsAppConnectionDto> => {
-    const { confirmConnectionScan } = await import("./whatsapp.server");
-    return confirmConnectionScan(context.supabase, context.userId, data.connectionId);
+    const { checkSessionLiveStatus } = await import("./whatsapp.server");
+    return checkSessionLiveStatus(context.supabase, context.userId, data?.connectionId);
   });
 
-/** 3. Desconecta a sessão do WhatsApp */
+/** 3. Salva ou atualiza as credenciais do Gateway de WhatsApp */
+export const saveWhatsAppGatewayConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (input: {
+      apiUrl: string;
+      apiKey?: string;
+      instanceName?: string;
+    }) => {
+      return z
+        .object({
+          apiUrl: z.string().min(1, "URL da API é obrigatória"),
+          apiKey: z.string().optional(),
+          instanceName: z.string().optional(),
+        })
+        .parse(input);
+    },
+  )
+  .handler(async ({ data, context }): Promise<WhatsAppConnectionDto> => {
+    const { updateGatewayCredentials } = await import("./whatsapp.server");
+    return updateGatewayCredentials(context.supabase, context.userId, data);
+  });
+
+/** 4. Solicita a regeneração do QR Code no servidor do Gateway */
+export const refreshWhatsAppQrCode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<WhatsAppConnectionDto> => {
+    const { getOrCreateSession } = await import("./whatsapp.server");
+    return getOrCreateSession(context.supabase, context.userId);
+  });
+
+/** 5. Desconecta a sessão do WhatsApp de forma real */
 export const disconnectWhatsAppSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: { connectionId: string }) =>
     z.object({ connectionId: z.string() }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -40,7 +69,7 @@ export const disconnectWhatsAppSession = createServerFn({ method: "POST" })
     return { ok: true, message: "Sessão desconectada com sucesso." };
   });
 
-/** 4. Lista os grupos cadastrados do usuário */
+/** 6. Lista os grupos cadastrados do usuário */
 export const listWhatsAppGroups = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<WhatsAppGroupDto[]> => {
@@ -53,7 +82,7 @@ export const listWhatsAppGroups = createServerFn({ method: "GET" })
     return (data || []) as WhatsAppGroupDto[];
   });
 
-/** 5. Sincroniza os grupos do WhatsApp */
+/** 7. Sincroniza os grupos REAIS do WhatsApp */
 export const syncWhatsAppGroups = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -61,15 +90,15 @@ export const syncWhatsAppGroups = createServerFn({ method: "POST" })
     const res = await syncGroupsForUser(context.supabase, context.userId);
     return {
       ok: true,
-      message: `${res.total} grupos localizados (${res.imported} novos, ${res.updated} atualizados).`,
+      message: `${res.total} grupos reais localizados (${res.imported} novos, ${res.updated} atualizados).`,
       ...res,
     };
   });
 
-/** 6. Atualiza as configurações individuais de um grupo */
+/** 8. Atualiza as configurações individuais de um grupo */
 export const updateWhatsAppGroupConfig = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z
       .object({
         groupId: z.string(),
@@ -99,7 +128,7 @@ export const updateWhatsAppGroupConfig = createServerFn({ method: "POST" })
     return { ok: true, message: "Configurações do grupo salvas com sucesso!" };
   });
 
-/** 7. Lista os itens da fila de publicação */
+/** 9. Lista os itens da fila de publicação */
 export const listWhatsAppQueue = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<WhatsAppQueueItemDto[]> => {
@@ -115,10 +144,10 @@ export const listWhatsAppQueue = createServerFn({ method: "GET" })
     })) as WhatsAppQueueItemDto[];
   });
 
-/** 8. Executa disparo manual de um item da fila */
+/** 10. Executa disparo de um item da fila através do gateway real */
 export const processWhatsAppQueueItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: { queueItemId: string }) =>
     z.object({ queueItemId: z.string() }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -126,10 +155,10 @@ export const processWhatsAppQueueItem = createServerFn({ method: "POST" })
     return executeQueueItem(context.supabase, context.userId, data.queueItemId);
   });
 
-/** 9. Cancela um item da fila */
+/** 11. Cancela um item da fila */
 export const cancelWhatsAppQueueItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: { queueItemId: string }) =>
     z.object({ queueItemId: z.string() }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -143,7 +172,7 @@ export const cancelWhatsAppQueueItem = createServerFn({ method: "POST" })
     return { ok: true, message: "Publicação cancelada." };
   });
 
-/** 10. Lista os logs de auditoria */
+/** 12. Lista os logs de auditoria reais */
 export const listWhatsAppLogs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<WhatsAppLogDto[]> => {
@@ -157,7 +186,7 @@ export const listWhatsAppLogs = createServerFn({ method: "GET" })
     return (data || []) as WhatsAppLogDto[];
   });
 
-/** 11. Busca configurações globais do WhatsApp */
+/** 13. Busca configurações globais do WhatsApp */
 export const getWhatsAppSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<WhatsAppSettingsDto> => {
@@ -178,16 +207,18 @@ export const getWhatsAppSettings = createServerFn({ method: "GET" })
     );
   });
 
-/** 12. Salva configurações globais do WhatsApp */
+/** 14. Salva configurações globais do WhatsApp */
 export const updateWhatsAppSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z
       .object({
         duplicate_window_hours: z.number().min(1).max(168),
         global_daily_limit: z.number().min(1).max(500),
         global_min_interval_minutes: z.number().min(1).max(180),
         pause_on_disconnect: z.boolean(),
+        default_api_url: z.string().optional().nullable(),
+        default_api_key: z.string().optional().nullable(),
       })
       .parse(input),
   )
@@ -207,7 +238,7 @@ export const updateWhatsAppSettings = createServerFn({ method: "POST" })
     return { ok: true, message: "Configurações salvas com sucesso!" };
   });
 
-/** 13. Métricas do WhatsApp para Dashboard */
+/** 15. Métricas do WhatsApp para Dashboard */
 export const getWhatsAppMetrics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

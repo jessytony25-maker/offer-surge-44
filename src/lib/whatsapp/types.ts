@@ -3,9 +3,9 @@
  */
 
 export type WhatsAppConnectionStatus =
+  | "not_configured"
   | "waiting_qr"
   | "qr_ready"
-  | "waiting_scan"
   | "connecting"
   | "connected"
   | "disconnected"
@@ -19,11 +19,20 @@ export type WhatsAppQueueStatus =
   | "failed"
   | "cancelled";
 
+export interface WhatsAppGatewayCredentials {
+  apiUrl?: string | null;
+  apiKey?: string | null;
+  instanceName?: string | null;
+}
+
 export interface WhatsAppConnectionDto {
   id: string;
   user_id: string;
-  provider: "whatsapp_web" | "evolution_api" | "official_cloud" | "custom";
+  provider: "evolution_api" | "waha" | "zapi" | "official_cloud" | "custom";
   session_identifier: string;
+  instance_name?: string | null;
+  api_url?: string | null;
+  api_key?: string | null;
   phone_number?: string | null;
   display_name?: string | null;
   status: WhatsAppConnectionStatus;
@@ -98,6 +107,8 @@ export interface WhatsAppSettingsDto {
   global_daily_limit: number;
   global_min_interval_minutes: number;
   pause_on_disconnect: boolean;
+  default_api_url?: string | null;
+  default_api_key?: string | null;
 }
 
 export interface SendResult {
@@ -114,7 +125,9 @@ export interface ValidationResult {
 
 export interface ConnectionResult {
   status: WhatsAppConnectionStatus;
-  qrCode?: string;
+  qrCode?: string | null;
   sessionIdentifier: string;
   message?: string;
+  phoneNumber?: string | null;
+  displayName?: string | null;
 }

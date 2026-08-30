@@ -4,8 +4,9 @@ import type {
   WhatsAppConnectionDto,
   ValidationResult,
   SendResult,
+  WhatsAppGatewayCredentials,
 } from "./types";
-import { defaultWhatsAppWebProvider } from "./providers/WhatsAppWebProvider";
+import { defaultWhatsAppGatewayProvider } from "./providers/WhatsAppWebProvider";
 
 export interface OfferToPublish {
   id?: string;
@@ -49,7 +50,7 @@ export class WhatsAppPublisher {
     if (connection.status !== "connected") {
       return {
         canSend: false,
-        reason: `WhatsApp desconectado (status atual: ${connection.status}). Publicação pausada.`,
+        reason: `WhatsApp não está conectado (status: ${connection.status}). Publicação pausada.`,
       };
     }
 
@@ -140,29 +141,32 @@ export class WhatsAppPublisher {
   }
 
   /**
-   * Envia uma mensagem validada para o grupo do WhatsApp.
+   * Envia uma mensagem validada para o grupo do WhatsApp de forma real.
    */
   static async publishMessage(params: {
     sessionIdentifier: string;
     targetGroupId: string;
     message: string;
     mediaUrl?: string | null;
+    credentials?: WhatsAppGatewayCredentials;
   }): Promise<SendResult> {
-    const { sessionIdentifier, targetGroupId, message, mediaUrl } = params;
+    const { sessionIdentifier, targetGroupId, message, mediaUrl, credentials } = params;
 
     if (mediaUrl) {
-      return defaultWhatsAppWebProvider.sendMedia(
+      return defaultWhatsAppGatewayProvider.sendMedia(
         sessionIdentifier,
         targetGroupId,
         mediaUrl,
         message,
+        credentials,
       );
     }
 
-    return defaultWhatsAppWebProvider.sendMessage(
+    return defaultWhatsAppGatewayProvider.sendMessage(
       sessionIdentifier,
       targetGroupId,
       message,
+      credentials,
     );
   }
 }
