@@ -114,7 +114,7 @@ export const refreshTopSellers = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { getCredentials } = await import("@/lib/credentials.server");
     const { shopeeTopSellers, toNumber } = await import("@/lib/shopee.server");
-    const { scoreOffer } = await import("@/lib/offer-score");
+    const { computeOfferScore } = await import("@/lib/offer-score");
     const creds = await getCredentials(context.userId, "marketplace", "shopee");
     const appId = creds["api_key"];
     const secret = creds["api_secret"];
@@ -134,7 +134,7 @@ export const refreshTopSellers = createServerFn({ method: "POST" })
       const sales = node.sales ?? 0;
       const commissionPct = toNumber(node.commissionRate) * (toNumber(node.commissionRate) <= 1 ? 100 : 1);
       const fingerprint = `shopee:${node.itemId}`;
-      const scored = scoreOffer({
+      const scored = computeOfferScore({
         discountPct,
         rating,
         salesCount: sales,
@@ -157,7 +157,7 @@ export const refreshTopSellers = createServerFn({ method: "POST" })
           commission: price ? (price * commissionPct) / 100 : null,
           original_url: node.productLink ?? null,
           affiliate_url: node.offerLink ?? null,
-          score: typeof scored === "number" ? scored : (scored?.score ?? 0),
+          score: scored.score,
           status: "new",
           fingerprint,
           is_demo: false,
