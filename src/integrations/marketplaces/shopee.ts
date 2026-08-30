@@ -6,20 +6,29 @@ import {
 } from "./types";
 
 /**
- * Shopee — Programa de Afiliados Shopee (Shopee Affiliate Open API).
- * As credenciais reais devem ser cadastradas em Links de Afiliado; enquanto
- * isso, todas as operações respondem "aguardando configuração".
+ * Shopee — Shopee Affiliate Open API (GraphQL).
+ * A conexão real é feita apenas com App ID + Secret (senha da API); as chamadas
+ * autenticadas vivem em `src/lib/shopee.server.ts`.
  */
 export const shopeeAdapter: MarketplaceAdapter = {
   slug: "shopee",
   name: "Shopee",
   program: "Shopee Affiliate Open API",
-  docsUrl: "https://affiliate.shopee.com.br/",
+  docsUrl: "https://affiliate.shopee.com.br/open_api",
   credentialFields: [
-    { key: "affiliate_id", label: "ID de afiliado", required: true },
-    { key: "api_key", label: "App ID", required: true },
-    { key: "api_secret", label: "App Secret", secret: true, required: true },
-    { key: "sub_id", label: "Sub ID (rastreamento)" },
+    {
+      key: "api_key",
+      label: "App ID",
+      required: true,
+      help: "Painel de Afiliados Shopee → Open API → App ID.",
+    },
+    {
+      key: "api_secret",
+      label: "Senha da API (Secret)",
+      secret: true,
+      required: true,
+      help: "Mesma tela do App ID. Fica guardada apenas no servidor.",
+    },
   ],
   capabilities: {
     searchProducts: true,
