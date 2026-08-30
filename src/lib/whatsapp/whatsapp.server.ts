@@ -21,13 +21,13 @@ async function getEffectiveCredentials(
 ): Promise<WhatsAppGatewayCredentials> {
   const apiUrl =
     conn?.api_url ||
-    process.env.WHATSAPP_GATEWAY_URL ||
-    process.env.WHATSAPP_API_URL ||
+    process.env["WHATSAPP_GATEWAY_URL"] ||
+    process.env["WHATSAPP_API_URL"] ||
     "";
   const apiKey =
     conn?.api_key ||
-    process.env.WHATSAPP_GATEWAY_KEY ||
-    process.env.WHATSAPP_API_KEY ||
+    process.env["WHATSAPP_GATEWAY_KEY"] ||
+    process.env["WHATSAPP_API_KEY"] ||
     "";
   const instanceName =
     conn?.instance_name ||
@@ -198,11 +198,11 @@ export async function checkSessionLiveStatus(
   };
 
   if (isNowConnected) {
-    updatePayload.qr_code = null;
-    if (stateRes.phoneNumber) updatePayload.phone_number = stateRes.phoneNumber;
-    if (stateRes.displayName) updatePayload.display_name = stateRes.displayName;
+    updatePayload["qr_code"] = null;
+    if (stateRes.phoneNumber) updatePayload["phone_number"] = stateRes.phoneNumber;
+    if (stateRes.displayName) updatePayload["display_name"] = stateRes.displayName;
     if (!wasConnected) {
-      updatePayload.connected_at = now;
+      updatePayload["connected_at"] = now;
     }
   }
 
