@@ -327,11 +327,15 @@ function Integracoes() {
   const { data, isLoading } = useQuery({
     queryKey: ["integrations"],
     queryFn: () => listIntegrations(),
+    retry: 1,
+    throwOnError: false,
   });
 
   const { data: syncLogs = [], refetch: refetchLogs } = useQuery({
     queryKey: ["sync_logs"],
     queryFn: () => fetchLogs(),
+    retry: 1,
+    throwOnError: false,
   });
 
   const [syncingSlug, setSyncingSlug] = useState<string | null>(null);
