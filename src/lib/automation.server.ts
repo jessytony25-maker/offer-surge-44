@@ -82,6 +82,7 @@ function brl(value: number | null | undefined) {
 }
 
 export interface OfferRow {
+  affiliate_status?: string | null;
   id: string;
   title: string;
   price: number;
@@ -259,7 +260,7 @@ export async function runAutomation(
   let offerQuery = supabase
     .from("offers")
     .select(
-      "id, title, price, previous_price, discount_pct, marketplace, score, coupon, free_shipping, affiliate_url, original_url, category, rating, commission_pct, image_url",
+      "id, title, price, previous_price, discount_pct, marketplace, score, coupon, free_shipping, affiliate_url, original_url, category, rating, commission_pct, image_url, affiliate_status",
     )
     .eq("user_id", userId)
     .eq("available", true)
@@ -302,6 +303,12 @@ export async function runAutomation(
     const lower = o.title.toLowerCase();
     if (blocked.some((w) => lower.includes(w))) return false;
     if (!o.affiliate_url && !o.original_url) return false;
+    // Mercado Livre: só publica com link de afiliado REAL resolvido e validado.
+    if (o.marketplace === "mercadolivre") {
+      const url = o.affiliate_url ?? "";
+      const hasMatt = url.includes("matt_word=") && url.includes("matt_tool=");
+      if (o.affiliate_status !== "resolved" || !hasMatt) return false;
+    }
     return true;
   });
 
