@@ -62,7 +62,7 @@ export const saveAutomation = createServerFn({ method: "POST" })
       end_time: data.end_time,
       daily_limit: data.daily_limit,
       interval_minutes: data.interval_minutes,
-      config: data.config,
+      config: data.config as never,
       updated_at: new Date().toISOString(),
     };
 
