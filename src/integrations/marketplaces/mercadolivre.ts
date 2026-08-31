@@ -15,7 +15,6 @@ import {
   type AdapterResult,
   type NormalizedProduct,
   type SyncReport,
-  notConfigured,
   CAP_FULL,
 } from "./types";
 import {
@@ -255,5 +254,3 @@ export const mercadoLivreAdapter: MarketplaceAdapter = {
     };
   },
 };
-
-export { notConfigured };
