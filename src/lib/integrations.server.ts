@@ -186,6 +186,7 @@ export async function syncMarketplaceOffers(
     .maybeSingle();
 
   const creds = (credRow?.credentials ?? {}) as Record<string, string>;
+  creds["user_id"] = userId;
 
   // 2. Executa a sincronização real no marketplace
   const syncResult = await adapter.syncOffers(creds);

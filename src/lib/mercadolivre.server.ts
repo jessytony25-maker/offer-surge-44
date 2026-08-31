@@ -15,6 +15,7 @@ const MELI_API = "https://api.mercadolibre.com";
 const MELI_AUTH = "https://auth.mercadolivre.com.br/authorization";
 
 export interface MeliCreds {
+  userId?: string;
   accessToken?: string;
   refreshToken?: string;
   clientId?: string;
@@ -38,16 +39,16 @@ export type MeliResult<T> = { ok: true; data: T; endpoint: string; httpStatus: n
 
 /** Mensagem específica por status HTTP — 403 NUNCA é "erro de internet". */
 export function describeMeliStatus(status: number, reason: string, endpoint: string): string {
-  const suffix = reason ? ` Motivo do Mercado Livre: "${reason}".` : "";
+  const suffix = reason ? ` Motivo: "${reason}".` : "";
   const where = ` Endpoint: ${endpoint}.`;
   if (status === 400) return `Mercado Livre recusou os parâmetros da requisição (HTTP 400).${suffix}${where}`;
   if (status === 401)
-    return `Mercado Livre recusou a autenticação (HTTP 401). Verifique as credenciais/token — o access token pode ter expirado.${suffix}${where}`;
+    return `Mercado Livre recusou a autenticação. Verifique as credenciais/token.${suffix}${where}`;
   if (status === 403)
-    return `Mercado Livre recusou a autorização da requisição (HTTP 403). Verifique permissões, escopos, endpoint e credenciais. O catálogo do Mercado Livre exige access token OAuth válido — chamadas anônimas são bloqueadas.${suffix}${where}`;
-  if (status === 404) return `Endpoint do Mercado Livre não encontrado (HTTP 404).${suffix}${where}`;
-  if (status === 429) return `Limite de requisições atingido (HTTP 429). Aguarde antes de tentar novamente.${suffix}${where}`;
-  if (status >= 500) return `Mercado Livre apresentou erro temporário (HTTP ${status}).${suffix}${where}`;
+    return `Mercado Livre recusou a autorização da requisição. Verifique permissões, escopos, endpoint e credenciais.${suffix}${where}`;
+  if (status === 404) return `Endpoint do Mercado Livre não encontrado.${suffix}${where}`;
+  if (status === 429) return `Limite de requisições atingido.${suffix}${where}`;
+  if (status >= 500) return `Mercado Livre apresentou erro temporário.${suffix}${where}`;
   return `Mercado Livre respondeu HTTP ${status}.${suffix}${where}`;
 }
 
@@ -227,10 +228,36 @@ export async function meliFetch<T>(
       const refreshed = await meliRefreshAccessToken(creds);
       if (refreshed.ok) {
         token = refreshed.accessToken;
-        await options.onTokensRefreshed?.({
-          accessToken: refreshed.accessToken,
-          refreshToken: refreshed.refreshToken,
-        });
+        if (options.onTokensRefreshed) {
+          await options.onTokensRefreshed({
+            accessToken: refreshed.accessToken,
+            refreshToken: refreshed.refreshToken,
+          });
+        } else if (creds.userId) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const { data: row } = await supabaseAdmin
+            .from("integration_credentials")
+            .select("credentials")
+            .eq("user_id", creds.userId)
+            .eq("kind", "marketplace")
+            .eq("provider", "mercadolivre")
+            .maybeSingle();
+
+          const record = (row?.credentials ?? {}) as Record<string, string>;
+          await supabaseAdmin.from("integration_credentials").upsert(
+            {
+              user_id: creds.userId,
+              kind: "marketplace",
+              provider: "mercadolivre",
+              credentials: {
+                ...record,
+                access_token: refreshed.accessToken,
+                refresh_token: refreshed.refreshToken,
+              },
+            },
+            { onConflict: "user_id,kind,provider" },
+          );
+        }
         ({ res, body } = await call(token));
       }
     }
@@ -255,7 +282,7 @@ export async function meliFetch<T>(
       endpoint,
       httpStatus: null,
       reason: err?.message ?? "network_error",
-      message: `Não foi possível conectar ao servidor do Mercado Livre. Endpoint: ${endpoint}.`,
+      message: `Não foi possível conectar ao servidor.`,
     };
   }
 }
@@ -295,6 +322,7 @@ export function validateAffiliateUrl(affiliateUrl: string, mattWord: string, mat
 
 export function credsFromRecord(record: Record<string, string>): MeliCreds {
   return {
+    userId: record["user_id"]?.trim() || "",
     accessToken: record["access_token"]?.trim() || record["api_key"]?.trim() || "",
     refreshToken: record["refresh_token"]?.trim() || "",
     clientId: record["client_id"]?.trim() || "",

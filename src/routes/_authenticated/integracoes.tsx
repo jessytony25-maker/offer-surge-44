@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +30,7 @@ import {
   diagnoseAmazonFn,
 } from "@/lib/integrations.functions";
 import { updateAutoSyncIntervalFn, getLatestSyncLogs } from "@/lib/sync/sync.functions";
+import { exchangeMeliCodeFn, diagnoseMercadoLivre } from "@/lib/mercadolivre.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -378,7 +379,7 @@ function IntegrationCard({
               {isSyncing ? "Sincronizando..." : "Sincronizar Agora"}
             </Button>
           )}
-          {isConnected && slug === "amazon" && onDiagnose && (
+          {isConnected && (slug === "amazon" || slug === "mercadolivre") && onDiagnose && (
             <Button
               size="sm"
               variant="outline"
@@ -449,6 +450,42 @@ function Integracoes() {
   const [amazonDiagnosis, setAmazonDiagnosis] = useState<any>(null);
   const [isDiagnosingAmazon, setIsDiagnosingAmazon] = useState(false);
   const [diagnoseModalOpen, setDiagnoseModalOpen] = useState(false);
+
+  // Estados do Diagnóstico Mercado Livre
+  const [meliDiagnosis, setMeliDiagnosis] = useState<any>(null);
+  const [isDiagnosingMeli, setIsDiagnosingMeli] = useState(false);
+  const [meliDiagnoseModalOpen, setMeliDiagnoseModalOpen] = useState(false);
+
+  // Mutation para trocar o código OAuth do Mercado Livre
+  const exchangeMeliCode = useServerFn(exchangeMeliCodeFn);
+  const exchangeMutation = useMutation({
+    mutationFn: (input: { code: string; redirectUri: string }) => exchangeMeliCode({ data: input }),
+    onSuccess: (res) => {
+      if (res.ok) {
+        toast.success("Autenticação com o Mercado Livre concluída com sucesso!");
+        // Limpa o parâmetro da URL
+        const url = new URL(window.location.href);
+        url.searchParams.delete("code");
+        url.searchParams.delete("state");
+        window.history.replaceState({}, "", url.toString());
+        queryClient.invalidateQueries({ queryKey: ["integrations"] });
+      } else {
+        toast.error(res.error || "Falha ao autenticar com o Mercado Livre.");
+      }
+    },
+    onError: () => toast.error("Falha ao comunicar com o servidor para autenticação."),
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const code = searchParams.get("code");
+      if (code) {
+        const redirectUri = `${window.location.origin}/integracoes`;
+        exchangeMutation.mutate({ code, redirectUri });
+      }
+    }
+  }, []);
 
   const [target, setTarget] = useState<{
     kind: Kind;
@@ -537,6 +574,22 @@ function Integracoes() {
     }
   };
 
+  const runMeliDiag = useServerFn(diagnoseMercadoLivre);
+  const handleMeliDiagnose = async () => {
+    setIsDiagnosingMeli(true);
+    setMeliDiagnosis(null);
+    setMeliDiagnoseModalOpen(true);
+    try {
+      const res = await runMeliDiag();
+      setMeliDiagnosis(res);
+      queryClient.invalidateQueries({ queryKey: ["integrations"] });
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao executar diagnóstico do Mercado Livre.");
+    } finally {
+      setIsDiagnosingMeli(false);
+    }
+  };
+
   const marketplaceRows = useMemo(
     () => new Map((data?.marketplaces ?? []).map((r) => [r.provider, r as StatusRow])),
     [data],
@@ -601,8 +654,20 @@ function Integracoes() {
                     : undefined
                 }
                 isUpdatingInterval={updatingIntervalSlug === a.slug}
-                onDiagnose={a.slug === "amazon" ? handleAmazonDiagnose : undefined}
-                isDiagnosing={a.slug === "amazon" ? isDiagnosingAmazon : undefined}
+                onDiagnose={
+                  a.slug === "amazon"
+                    ? handleAmazonDiagnose
+                    : a.slug === "mercadolivre"
+                      ? handleMeliDiagnose
+                      : undefined
+                }
+                isDiagnosing={
+                  a.slug === "amazon"
+                    ? isDiagnosingAmazon
+                    : a.slug === "mercadolivre"
+                      ? isDiagnosingMeli
+                      : undefined
+                }
               />
             ))}
           </div>
@@ -787,6 +852,35 @@ function Integracoes() {
             </div>
           )}
 
+          {target?.provider === "mercadolivre" && (
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 space-y-2 text-xs">
+              <span className="font-semibold text-foreground flex items-center gap-1.5 text-amber-700">
+                <AlertTriangle className="size-3.5" />
+                Fluxo de Autenticação OAuth (Obrigatório)
+              </span>
+              <p className="text-[10px] text-muted-foreground leading-tight">
+                Primeiro configure seu Client ID e Client Secret. Depois, registre a URL abaixo no console de desenvolvedor do Mercado Livre e clique em Autorizar.
+              </p>
+              <div className="text-[10px] bg-background p-1.5 rounded font-mono break-all select-all border border-border">
+                Redirect URI: {typeof window !== "undefined" ? `${window.location.origin}/integracoes` : ""}
+              </div>
+              {values.client_id && (
+                <Button
+                  size="sm"
+                  type="button"
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white h-8 text-[11px]"
+                  onClick={() => {
+                    const redirectUri = `${window.location.origin}/integracoes`;
+                    const authUrl = `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${values.client_id.trim()}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+                    window.location.href = authUrl;
+                  }}
+                >
+                  Autorizar no Mercado Livre
+                </Button>
+              )}
+            </div>
+          )}
+
           <div className="space-y-3 py-2">
             {target?.fields.map((f) => (
               <div key={f.key} className="space-y-1">
@@ -891,6 +985,54 @@ function Integracoes() {
           </div>
           <DialogFooter>
             <Button size="sm" onClick={() => setDiagnoseModalOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DE DIAGNÓSTICO DO MERCADO LIVRE */}
+      <Dialog open={meliDiagnoseModalOpen} onOpenChange={setMeliDiagnoseModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">Diagnóstico da Integração Mercado Livre</DialogTitle>
+            <DialogDescription className="text-xs">
+              Mapeamento real de autenticação OAuth, API de Catálogo e afiliação.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-3 text-xs">
+            {isDiagnosingMeli ? (
+              <div className="py-6 text-center space-y-2">
+                <RefreshCw className="size-6 text-primary animate-spin mx-auto" />
+                <p className="text-muted-foreground">Executando diagnóstico em 10 etapas no Mercado Livre...</p>
+              </div>
+            ) : meliDiagnosis ? (
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold text-foreground mb-2 bg-muted p-2 rounded">
+                  Status Final: <span className="uppercase text-primary">{meliDiagnosis.connectionStatus}</span>
+                  <br />
+                  <span className="text-[10px] text-muted-foreground font-normal">{meliDiagnosis.summary}</span>
+                </p>
+                
+                {meliDiagnosis.steps?.map((step: any) => (
+                  <div key={step.id} className="flex items-start justify-between py-1.5 border-b border-border/40 gap-4">
+                    <div className="space-y-0.5">
+                      <span className="font-semibold text-foreground">TESTE {step.id}: {step.name}</span>
+                      <p className="text-[10px] text-muted-foreground leading-tight">{step.detail}</p>
+                      {step.endpoint && (
+                        <p className="text-[9px] font-mono text-muted-foreground break-all">URL: {step.endpoint}</p>
+                      )}
+                    </div>
+                    <Badge variant="outline" className={`text-[9px] shrink-0 ${step.status === "pass" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-semibold" : step.status === "fail" ? "border-destructive/30 bg-destructive/10 text-destructive font-semibold" : "border-muted bg-muted text-muted-foreground"}`}>
+                      {step.status === "pass" ? "✓ PASSOU" : step.status === "fail" ? "✗ FALHOU" : "⏭️ PULADO"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground italic">Erro ao carregar o relatório do Mercado Livre.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button size="sm" onClick={() => setMeliDiagnoseModalOpen(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

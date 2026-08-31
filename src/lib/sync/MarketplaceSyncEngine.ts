@@ -74,6 +74,7 @@ export class MarketplaceSyncEngine {
         .maybeSingle();
 
       const credentials = (credRow?.credentials ?? {}) as Record<string, string>;
+      credentials["user_id"] = userId;
 
       // Se for Amazon e a PA-API não estiver disponível (sem chaves), não executa busca automática
       if (marketplaceSlug === "amazon" && (!credentials.api_key || !credentials.api_secret)) {

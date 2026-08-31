@@ -81,6 +81,7 @@ export const saveIntegration = createServerFn({ method: "POST" })
       (existing?.credentials ?? {}) as Record<string, string>,
       data.credentials,
     );
+    merged["user_id"] = context.userId;
 
     await context.supabase.from("integration_credentials").upsert(
       { user_id: context.userId, kind, provider: data.provider, credentials: merged },
