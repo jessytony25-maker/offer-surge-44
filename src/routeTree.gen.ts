@@ -19,6 +19,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedFilaRouteImport } from './routes/_authenticated/fila'
 import { Route as AuthenticatedGruposRouteImport } from './routes/_authenticated/grupos'
 import { Route as AuthenticatedIntegracoesRouteImport } from './routes/_authenticated/integracoes'
+import { Route as AuthenticatedMercadolivreRouteImport } from './routes/_authenticated/mercadolivre'
 import { Route as AuthenticatedOfertasRouteImport } from './routes/_authenticated/ofertas'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedShopeeAnalyticsRouteImport } from './routes/_authenticated/shopee-analytics'
@@ -78,6 +79,12 @@ const AuthenticatedIntegracoesRoute =
   AuthenticatedIntegracoesRouteImport.update({
     id: '/integracoes',
     path: '/integracoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMercadolivreRoute =
+  AuthenticatedMercadolivreRouteImport.update({
+    id: '/mercadolivre',
+    path: '/mercadolivre',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedOfertasRoute = AuthenticatedOfertasRouteImport.update({
@@ -143,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/fila': typeof AuthenticatedFilaRoute
   '/grupos': typeof AuthenticatedGruposRoute
   '/integracoes': typeof AuthenticatedIntegracoesRoute
+  '/mercadolivre': typeof AuthenticatedMercadolivreRoute
   '/ofertas': typeof AuthenticatedOfertasRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/shopee-analytics': typeof AuthenticatedShopeeAnalyticsRoute
@@ -163,6 +171,7 @@ export interface FileRoutesByTo {
   '/fila': typeof AuthenticatedFilaRoute
   '/grupos': typeof AuthenticatedGruposRoute
   '/integracoes': typeof AuthenticatedIntegracoesRoute
+  '/mercadolivre': typeof AuthenticatedMercadolivreRoute
   '/ofertas': typeof AuthenticatedOfertasRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/shopee-analytics': typeof AuthenticatedShopeeAnalyticsRoute
@@ -185,6 +194,7 @@ export interface FileRoutesById {
   '/_authenticated/fila': typeof AuthenticatedFilaRoute
   '/_authenticated/grupos': typeof AuthenticatedGruposRoute
   '/_authenticated/integracoes': typeof AuthenticatedIntegracoesRoute
+  '/_authenticated/mercadolivre': typeof AuthenticatedMercadolivreRoute
   '/_authenticated/ofertas': typeof AuthenticatedOfertasRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/shopee-analytics': typeof AuthenticatedShopeeAnalyticsRoute
@@ -207,6 +217,7 @@ export interface FileRouteTypes {
     | '/fila'
     | '/grupos'
     | '/integracoes'
+    | '/mercadolivre'
     | '/ofertas'
     | '/relatorios'
     | '/shopee-analytics'
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | '/fila'
     | '/grupos'
     | '/integracoes'
+    | '/mercadolivre'
     | '/ofertas'
     | '/relatorios'
     | '/shopee-analytics'
@@ -248,6 +260,7 @@ export interface FileRouteTypes {
     | '/_authenticated/fila'
     | '/_authenticated/grupos'
     | '/_authenticated/integracoes'
+    | '/_authenticated/mercadolivre'
     | '/_authenticated/ofertas'
     | '/_authenticated/relatorios'
     | '/_authenticated/shopee-analytics'
@@ -337,6 +350,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIntegracoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/mercadolivre': {
+      id: '/_authenticated/mercadolivre'
+      path: '/mercadolivre'
+      fullPath: '/mercadolivre'
+      preLoaderRoute: typeof AuthenticatedMercadolivreRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/ofertas': {
       id: '/_authenticated/ofertas'
       path: '/ofertas'
@@ -411,6 +431,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFilaRoute: typeof AuthenticatedFilaRoute
   AuthenticatedGruposRoute: typeof AuthenticatedGruposRoute
   AuthenticatedIntegracoesRoute: typeof AuthenticatedIntegracoesRoute
+  AuthenticatedMercadolivreRoute: typeof AuthenticatedMercadolivreRoute
   AuthenticatedOfertasRoute: typeof AuthenticatedOfertasRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
   AuthenticatedShopeeAnalyticsRoute: typeof AuthenticatedShopeeAnalyticsRoute
@@ -430,6 +451,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFilaRoute: AuthenticatedFilaRoute,
   AuthenticatedGruposRoute: AuthenticatedGruposRoute,
   AuthenticatedIntegracoesRoute: AuthenticatedIntegracoesRoute,
+  AuthenticatedMercadolivreRoute: AuthenticatedMercadolivreRoute,
   AuthenticatedOfertasRoute: AuthenticatedOfertasRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
   AuthenticatedShopeeAnalyticsRoute: AuthenticatedShopeeAnalyticsRoute,

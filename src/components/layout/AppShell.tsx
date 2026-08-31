@@ -28,6 +28,7 @@ const NAV = [
   { to: "/ofertas", label: "Ofertas", icon: Tag },
   { to: "/whatsapp/conexoes", label: "WhatsApp", icon: MessageSquare },
   { to: "/shopee-analytics", label: "Shopee Analytics", icon: ShoppingBag },
+  { to: "/mercadolivre", label: "Mercado Livre", icon: ShoppingBag },
   { to: "/grupos", label: "Grupos", icon: Users },
   { to: "/fila", label: "Fila", icon: ListChecks },
   { to: "/automacoes", label: "Automações", icon: Zap },

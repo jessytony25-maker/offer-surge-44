@@ -20,8 +20,9 @@ import {
 import {
   applyMattParams,
   credsFromRecord,
-  meliDiagnose,
+  extractMeliId,
   meliFetch,
+  meliTestAuth,
   validateAffiliateUrl,
 } from "@/lib/mercadolivre.server";
 
@@ -127,18 +128,31 @@ export const mercadoLivreAdapter: MarketplaceAdapter = {
   matchesUrl: (url) => /(mercadolivre|mercadolibre)\.[a-z.]+/i.test(url),
 
   async testConnection(credentials): Promise<AdapterResult<{ message: string; details?: string }>> {
-    const diag = await meliDiagnose(credentials);
-    const detail = diag.steps
-      .map((s) => `${s.status === "pass" ? "✅" : s.status === "fail" ? "❌" : "⏭️"} ${s.id}. ${s.name}: ${s.detail}`)
-      .join("\n");
+    const creds = credsFromRecord(credentials);
 
-    if (diag.connectionStatus === "connected") {
-      return { ok: true, data: { message: diag.summary, details: detail } };
+    // Verificação rápida: apenas /users/me — não roda diagnóstico completo de 10 etapas
+    const auth = await meliTestAuth(creds);
+
+    if (!auth.ok) {
+      // HTTP 403 sem token: mensagem específica, não "erro de rede"
+      const isNoToken = auth.httpStatus === null && !creds.accessToken;
+      return {
+        ok: false,
+        state: isNoToken ? "not_configured" : "error",
+        message: auth.message,
+      };
     }
+
+    const affiliateStatus = auth.hasMatt
+      ? "Links de afiliado via matt_word/matt_tool configurados."
+      : "⚠️ matt_word/matt_tool não configurados — links de afiliado usarão URL original (pendente). Configure-os no formulário de credenciais.";
+
     return {
-      ok: false,
-      state: diag.connectionStatus === "not_configured" ? "not_configured" : "error",
-      message: `${diag.summary}\n\n${detail}`,
+      ok: true,
+      data: {
+        message: `Mercado Livre conectado como "${auth.nickname}". ${affiliateStatus}`,
+        details: `Conta verificada via GET /users/me (HTTP 200). ID: ${auth.userId}.`,
+      },
     };
   },
 
@@ -176,7 +190,22 @@ export const mercadoLivreAdapter: MarketplaceAdapter = {
 
   async getProduct(externalId, credentials): Promise<AdapterResult<NormalizedProduct>> {
     const creds = credsFromRecord(credentials);
-    const res = await meliFetch<any>(`/items/${encodeURIComponent(externalId)}`, creds, { step: "product" });
+
+    // externalId pode ser um ID direto (MLB1234) ou uma URL completa
+    let itemId = externalId;
+    if (externalId.startsWith("http")) {
+      const extracted = extractMeliId(externalId);
+      if (!extracted) {
+        return {
+          ok: false,
+          state: "error",
+          message: `Não foi possível extrair o ID do produto da URL: ${externalId}. Use uma URL no formato https://produto.mercadolivre.com.br/MLB-XXXXXXXX`,
+        };
+      }
+      itemId = extracted;
+    }
+
+    const res = await meliFetch<any>(`/items/${encodeURIComponent(itemId)}`, creds, { step: "product" });
     if (!res.ok) return { ok: false, state: "error", message: res.message };
 
     const item = res.data;
@@ -184,7 +213,9 @@ export const mercadoLivreAdapter: MarketplaceAdapter = {
       creds.mattWord && creds.mattTool
         ? applyMattParams(item.permalink || "", creds.mattWord, creds.mattTool)
         : null;
-    return { ok: true, data: normalizeMeliItem(item, affiliate) };
+    const validAffiliate =
+      affiliate && validateAffiliateUrl(affiliate, creds.mattWord!, creds.mattTool!) ? affiliate : null;
+    return { ok: true, data: normalizeMeliItem(item, validAffiliate) };
   },
 
   async buildAffiliateLink(originalUrl, credentials, subId): Promise<AdapterResult<string>> {

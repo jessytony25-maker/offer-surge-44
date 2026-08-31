@@ -332,6 +332,65 @@ export function credsFromRecord(record: Record<string, string>): MeliCreds {
   };
 }
 
+/**
+ * Testa rapidamente a autenticação OAuth chamando apenas /users/me.
+ * Usado pelo testConnection do adapter — muito mais rápido que o diagnóstico de 10 etapas.
+ */
+export async function meliTestAuth(
+  creds: MeliCreds,
+): Promise<
+  | { ok: true; nickname: string; userId: number; hasMatt: boolean }
+  | { ok: false; httpStatus: number | null; message: string }
+> {
+  if (!creds.accessToken) {
+    return {
+      ok: false,
+      httpStatus: null,
+      message:
+        "Access Token OAuth não configurado. A API do Mercado Livre recusa (HTTP 403) qualquer consulta sem autenticação. Configure o token em Integrações → Mercado Livre.",
+    };
+  }
+
+  const res = await meliFetch<{ id?: number; nickname?: string; site_id?: string }>(
+    "/users/me",
+    creds,
+    { step: "test_auth" },
+  );
+
+  if (!res.ok) {
+    return { ok: false, httpStatus: res.httpStatus, message: res.message };
+  }
+
+  return {
+    ok: true,
+    nickname: res.data.nickname ?? String(res.data.id ?? "desconhecido"),
+    userId: res.data.id ?? 0,
+    hasMatt: Boolean(creds.mattWord && creds.mattTool),
+  };
+}
+
+/**
+ * Extrai o ID MLB de uma URL do Mercado Livre.
+ * Aceita formatos:
+ *   https://produto.mercadolivre.com.br/MLB-3200002050-...
+ *   https://www.mercadolivre.com.br/p/MLB12345678
+ *   https://produto.mercadolivre.com.br/MLB1234567890
+ */
+export function extractMeliId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (!/(mercadolivre|mercadolibre)\.[a-z.]+$/i.test(u.hostname)) return null;
+    // Tenta path: /MLB-XXXXXXXX-... ou /MLBXXXXXXXX
+    const pathMatch = u.pathname.match(/\/(MLB[-]?\d+)/i);
+    if (pathMatch) return pathMatch[1].replace("-", "");
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+
+
 export interface DiagnosticStep {
   id: number;
   name: string;
@@ -377,17 +436,22 @@ export async function meliDiagnose(record: Record<string, string>): Promise<Meli
   };
 
   // TESTE 1 — servidor acessível
+  // IMPORTANTE: /sites/MLB retorna 403 sem token OAuth (PolicyAgent). Usamos o
+  // endpoint raiz público (https://api.mercadolibre.com) que responde 200 sem auth.
   let serverUp = false;
+  const pingEndpoint = MELI_API; // endpoint raiz — sem requisito de autenticação
   try {
-    const ping = await fetch(`${MELI_API}/sites/MLB`, { method: "GET", headers: { Accept: "application/json" } });
+    const ping = await fetch(pingEndpoint, { method: "GET", headers: { Accept: "application/json" } });
+    // O servidor pode retornar qualquer status (200, 301, 404) — o que importa é
+    // que a conexão TCP foi estabelecida (sem exceção de rede).
     serverUp = true;
-    push(1, "Servidor Mercado Livre acessível", "pass", `Servidor respondeu (HTTP ${ping.status}).`, `${MELI_API}/sites/MLB`, ping.status);
+    push(1, "Servidor Mercado Livre acessível", "pass", `Servidor respondeu (HTTP ${ping.status}). Conexão TCP estabelecida.`, pingEndpoint, ping.status);
   } catch (err: any) {
-    push(1, "Servidor Mercado Livre acessível", "fail", `Não foi possível conectar ao servidor: ${err?.message ?? "erro de rede"}.`, `${MELI_API}/sites/MLB`, null);
+    push(1, "Servidor Mercado Livre acessível", "fail", `Não foi possível conectar ao servidor: ${err?.message ?? "erro de rede"}.`, pingEndpoint, null);
   }
   if (!serverUp) {
-    for (let i = 2; i <= 10; i++) push(i, DIAG_NAMES[i]!, "skipped", "Não executado: servidor inacessível.");
-    return fail("error", "Não foi possível conectar ao servidor do Mercado Livre.");
+    for (let i = 2; i <= 10; i++) push(i, DIAG_NAMES[i]!, "skipped", "Não executado: servidor inacessível (erro de rede real).");
+    return fail("error", "Não foi possível conectar ao servidor do Mercado Livre. Verifique sua conexão com a internet.");
   }
 
   // TESTE 2 — credenciais presentes
