@@ -34,9 +34,18 @@ const NAV = [
 
 function NavList({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const amIAdminFn = useServerFn(amIAdmin);
+  const { data: adminInfo } = useQuery({
+    queryKey: ["am-i-admin"],
+    queryFn: () => amIAdminFn(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const items = adminInfo?.isAdmin
+    ? [...NAV, { to: "/admin", label: "Admin", icon: ShieldCheck } as const]
+    : NAV;
   return (
     <nav className="flex flex-col gap-1">
-      {NAV.map(({ to, label, icon: Icon }) => {
+      {items.map(({ to, label, icon: Icon }) => {
         const active = pathname === to || (to === "/whatsapp/conexoes" && pathname.startsWith("/whatsapp"));
         return (
           <Link
