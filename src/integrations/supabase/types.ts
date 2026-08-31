@@ -290,12 +290,14 @@ export type Database = {
       automations: {
         Row: {
           active: boolean
+          config: Json
           created_at: string
           daily_limit: number
           end_time: string
           group_id: string | null
           id: string
           interval_minutes: number
+          last_run_at: string | null
           name: string
           start_time: string
           template_id: string | null
@@ -304,12 +306,14 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          config?: Json
           created_at?: string
           daily_limit?: number
           end_time?: string
           group_id?: string | null
           id?: string
           interval_minutes?: number
+          last_run_at?: string | null
           name: string
           start_time?: string
           template_id?: string | null
@@ -318,12 +322,14 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          config?: Json
           created_at?: string
           daily_limit?: number
           end_time?: string
           group_id?: string | null
           id?: string
           interval_minutes?: number
+          last_run_at?: string | null
           name?: string
           start_time?: string
           template_id?: string | null

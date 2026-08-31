@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Zap,
@@ -8,14 +8,10 @@ import {
   Play,
   Settings2,
   Trash2,
-  CheckCircle2,
   Clock,
   Filter,
   Send,
-  Sliders,
-  Sparkles,
-  RefreshCw,
-  ShoppingBag,
+  Rocket,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
@@ -29,107 +25,111 @@ import {
   type AutomationRule,
 } from "@/components/automacoes/AutomationBuilderDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { sendTelegramMessage } from "@/lib/telegram.functions";
-import { refreshTopSellers } from "@/lib/shopee.functions";
+import {
+  listAutomations,
+  saveAutomation,
+  toggleAutomation,
+  deleteAutomation,
+  executeAutomation,
+  executeAllAutomations,
+} from "@/lib/automation.functions";
 
 export const Route = createFileRoute("/_authenticated/automacoes")({
   head: () => ({
     meta: [
       { title: `Automações — ${BRAND.name}` },
-      { name: "description", content: "Regras automáticas de captura, filtro e publicação no Telegram." },
+      { name: "description", content: "Regras automáticas de captura, filtro e publicação real no Telegram." },
       { property: "og:title", content: `Automações — ${BRAND.name}` },
-      { property: "og:description", content: "Regras automáticas de captura e publicação no Telegram." },
+      { property: "og:description", content: "Regras automáticas de captura e publicação real no Telegram." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Automacoes,
 });
 
-const DEFAULT_RULES: AutomationRule[] = [
-  {
-    id: "rule-top-shopee",
-    name: "🔥 Automação Telegram — Mais Vendidos Shopee",
-    enabled: true,
-    trigger_type: "top_sellers",
-    trigger_interval: "30m",
-    min_score: 75,
-    min_discount: 25,
-    min_price: 15,
-    max_price: 1500,
-    min_commission: 4,
-    marketplaces: ["shopee"],
-    categories: ["eletronicos", "casa", "moda", "beleza"],
-    blocked_words: "réplica, usado, defeito",
-    only_free_shipping: false,
-    only_with_coupon: false,
-    group_ids: [],
-    copy_template_id: "urgency",
-    custom_copy: `🚨 <b>SUPER OFERTA SHOPEE!</b> 🚨\n\n📦 <b>{titulo}</b>\n\n❌ De: <s>{preco_de}</s>\n🔥 <b>Por: {preco_por}</b> ({desconto}% OFF)\n⭐ Score de Oferta: {score}/100\n\n👉 <b>Compre com desconto exclusivo:</b>\n{link}\n\n<i>⚠️ Estoque e preço promocional limitados!</i>`,
-    interval_minutes: 20,
-    daily_limit: 30,
-    start_hour: "08:00",
-    end_hour: "22:00",
-    active_days: ["seg", "ter", "qua", "qui", "sex", "sab", "dom"],
-    action_mode: "auto_publish",
-    today_sent_count: 8,
-  },
-  {
-    id: "rule-price-drop",
-    name: "⚡ Alerta de Quedas de Preço & Descontos &gt; 40%",
-    enabled: true,
-    trigger_type: "price_drop",
-    trigger_interval: "15m",
-    min_score: 80,
-    min_discount: 40,
-    min_price: 20,
-    max_price: 3000,
-    min_commission: 3,
-    marketplaces: ["shopee", "mercadolivre", "amazon"],
-    categories: ["eletronicos", "games", "casa"],
-    blocked_words: "réplica, segunda mão",
-    only_free_shipping: true,
-    only_with_coupon: false,
-    group_ids: [],
-    copy_template_id: "direct",
-    custom_copy: `⚡ <b>QUEDA DE PREÇO HISTÓRICA!</b>\n\n📦 <b>{titulo}</b>\n\n💰 <b>{preco_por}</b> (era {preco_de})\n🏷️ Desconto: {desconto}% OFF\n🏬 {loja}\n🚚 {frete}\n\n🔗 <b>Acessar oferta:</b> {link}`,
-    interval_minutes: 30,
-    daily_limit: 20,
-    start_hour: "09:00",
-    end_hour: "21:30",
-    active_days: ["seg", "ter", "qua", "qui", "sex"],
-    action_mode: "auto_publish",
-    today_sent_count: 3,
-  },
-];
+type AutomationRow = {
+  id: string;
+  name: string;
+  active: boolean;
+  start_time: string;
+  end_time: string;
+  daily_limit: number;
+  interval_minutes: number;
+  group_id: string | null;
+  template_id: string | null;
+  config: Record<string, unknown> | null;
+  last_run_at?: string | null;
+};
+
+const FALLBACK_COPY =
+  "⚡ <b>{titulo}</b>\n\n💰 <b>{preco_por}</b> (era {preco_de})\n🏷️ {desconto}% OFF\n🏬 {loja}\n\n🔗 {link}";
+
+function rowToRule(row: AutomationRow, sentToday: number): AutomationRule {
+  const c = (row.config ?? {}) as Partial<AutomationRule>;
+  return {
+    id: row.id,
+    name: row.name,
+    enabled: row.active,
+    trigger_type: c.trigger_type ?? "new_offer",
+    trigger_interval: c.trigger_interval ?? "30m",
+    min_score: c.min_score ?? 70,
+    min_discount: c.min_discount ?? 20,
+    min_price: c.min_price ?? 10,
+    max_price: c.max_price ?? 5000,
+    min_commission: c.min_commission ?? 0,
+    marketplaces: c.marketplaces ?? [],
+    categories: c.categories ?? [],
+    blocked_words: c.blocked_words ?? "",
+    only_free_shipping: c.only_free_shipping ?? false,
+    only_with_coupon: c.only_with_coupon ?? false,
+    group_ids: c.group_ids ?? [],
+    copy_template_id: c.copy_template_id ?? "direct",
+    custom_copy: c.custom_copy ?? FALLBACK_COPY,
+    interval_minutes: row.interval_minutes,
+    daily_limit: row.daily_limit,
+    start_hour: (row.start_time ?? "08:00").slice(0, 5),
+    end_hour: (row.end_time ?? "22:00").slice(0, 5),
+    active_days: c.active_days ?? ["seg", "ter", "qua", "qui", "sex", "sab", "dom"],
+    action_mode: c.action_mode ?? "auto_publish",
+    today_sent_count: sentToday,
+  };
+}
 
 function Automacoes() {
-  const [rules, setRules] = useState<AutomationRule[]>(() => {
-    try {
-      const saved = localStorage.getItem("oferta_surge_automations");
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return DEFAULT_RULES;
-  });
-
+  const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<AutomationRule | null>(null);
   const [executingRuleId, setExecutingRuleId] = useState<string | null>(null);
 
-  const sendTelegramFn = useServerFn(sendTelegramMessage);
-  const refreshTopSellersFn = useServerFn(refreshTopSellers);
+  const listFn = useServerFn(listAutomations);
+  const saveFn = useServerFn(saveAutomation);
+  const toggleFn = useServerFn(toggleAutomation);
+  const deleteFn = useServerFn(deleteAutomation);
+  const executeFn = useServerFn(executeAutomation);
+  const executeAllFn = useServerFn(executeAllAutomations);
+
+  const { data } = useQuery({
+    queryKey: ["automations"],
+    queryFn: () => listFn(),
+  });
+
+  const rules: AutomationRule[] = (data?.automations ?? []).map((row) =>
+    rowToRule(row as AutomationRow, data?.sentToday?.[row.id] ?? 0),
+  );
 
   const { data: groups = [] } = useQuery({
     queryKey: ["groups"],
     queryFn: async () => {
-      const { data } = await supabase.from("groups").select("*").order("created_at", { ascending: false });
-      return data || [];
+      const { data: rows } = await supabase
+        .from("groups")
+        .select("*")
+        .order("created_at", { ascending: false });
+      return rows || [];
     },
   });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem("oferta_surge_automations", JSON.stringify(rules));
-    } catch {}
-  }, [rules]);
+  const refresh = () => qc.invalidateQueries({ queryKey: ["automations"] });
 
   const handleCreateNew = () => {
     setEditingRule(null);
@@ -141,87 +141,85 @@ function Automacoes() {
     setDialogOpen(true);
   };
 
-  const handleToggle = (id: string, enabled: boolean) => {
-    setRules((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, enabled } : r)),
-    );
-    toast.success(enabled ? "Automação ativada!" : "Automação pausada.");
+  const handleToggle = async (id: string, enabled: boolean) => {
+    try {
+      await toggleFn({ data: { id, active: enabled } });
+      toast.success(enabled ? "Automação ativada!" : "Automação pausada.");
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao atualizar automação.");
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setRules((prev) => prev.filter((r) => r.id !== id));
-    toast.success("Regra de automação excluída.");
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteFn({ data: { id } });
+      toast.success("Regra de automação excluída.");
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao excluir automação.");
+    }
   };
 
-  const handleSaveRule = (rule: AutomationRule) => {
-    setRules((prev) => {
-      const exists = prev.some((r) => r.id === rule.id);
-      if (exists) {
-        return prev.map((r) => (r.id === rule.id ? rule : r));
-      }
-      return [rule, ...prev];
-    });
+  const handleSaveRule = async (rule: AutomationRule) => {
+    try {
+      const { id, name, enabled, interval_minutes, daily_limit, start_hour, end_hour, ...rest } =
+        rule;
+      await saveFn({
+        data: {
+          ...(id && !id.startsWith("rule-") ? { id } : {}),
+          name,
+          active: enabled,
+          start_time: `${start_hour}:00`,
+          end_time: `${end_hour}:00`,
+          daily_limit,
+          interval_minutes,
+          group_id: rule.group_ids[0] ?? null,
+          config: { ...rest, start_hour, end_hour } as Record<string, unknown>,
+        },
+      });
+      toast.success("Automação salva no banco de dados.");
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar automação.");
+    }
   };
 
   const handleExecuteNow = async (rule: AutomationRule) => {
-    setExecutingRuleId(rule.id || "exec");
+    if (!rule.id) return;
+    setExecutingRuleId(rule.id);
+    toast.loading(`Executando "${rule.name}" com ofertas reais...`, { id: "exec-rule" });
     try {
-      toast.loading(`Executando "${rule.name}"...`, { id: "exec-rule" });
-
-      // 1. Sincroniza mais vendidos / ofertas
-      await refreshTopSellersFn().catch(() => null);
-
-      // 2. Busca grupos cadastrados
-      const targetGroupIds = rule.group_ids.length > 0
-        ? rule.group_ids
-        : groups.map((g) => g.id);
-
-      if (targetGroupIds.length === 0) {
-        toast.warning(
-          "Nenhum grupo do Telegram conectado. Cadastre um grupo na aba 'Grupos' via QR Code para receber os disparos.",
-          { id: "exec-rule" },
-        );
-        return;
+      const res = await executeFn({ data: { id: rule.id, ignoreWindow: true } });
+      if (res.published + res.queued > 0) {
+        toast.success(res.message, { id: "exec-rule" });
+      } else {
+        toast.warning(res.message, { id: "exec-rule" });
       }
-
-      // 3. Monta e envia disparo
-      const sampleText = rule.custom_copy
-        .replace(/\{titulo\}/g, "Fone Bluetooth Sem Fio TWS Cancelamento de Ruído")
-        .replace(/\{preco_de\}/g, "R$ 189,90")
-        .replace(/\{preco_por\}/g, "R$ 79,90")
-        .replace(/\{desconto\}/g, "58")
-        .replace(/\{loja\}/g, "Shopee Oficial")
-        .replace(/\{score\}/g, "96")
-        .replace(/\{link\}/g, "https://shope.ee/exemplo")
-        .replace(/\{cupom\}/g, "SURGE50")
-        .replace(/\{frete\}/g, "Frete Grátis")
-        .replace(/\{parcelamento\}/g, "ou 3x de R$ 26,63");
-
-      let sentCount = 0;
-      for (const gid of targetGroupIds.slice(0, 3)) {
-        try {
-          const res = await sendTelegramFn({ data: { groupId: gid, text: sampleText } });
-          if (res.ok) sentCount++;
-        } catch {}
+      if (res.skipped.length > 0) {
+        toast.message("Detalhes da execução", { description: res.skipped.slice(0, 3).join("\n") });
       }
-
-      // Atualiza contador de envios
-      setRules((prev) =>
-        prev.map((r) =>
-          r.id === rule.id
-            ? { ...r, today_sent_count: (r.today_sent_count || 0) + (sentCount || 1) }
-            : r,
-        ),
-      );
-
-      toast.success(
-        `Regra executada com sucesso! Ofertas filtradas e processadas para os grupos do Telegram.`,
-        { id: "exec-rule" },
-      );
+      refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao executar regra.", { id: "exec-rule" });
     } finally {
       setExecutingRuleId(null);
+    }
+  };
+
+  const handlePublishAll = async () => {
+    toast.loading("Publicando todas as automações ativas...", { id: "exec-all" });
+    try {
+      const res = await executeAllFn();
+      toast.success(
+        `${res.total} automação(ões) executada(s): ${res.published} publicada(s) e ${res.queued} na fila.`,
+        { id: "exec-all" },
+      );
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao publicar automações.", {
+        id: "exec-all",
+      });
     }
   };
 
@@ -255,6 +253,7 @@ function Automacoes() {
       desc: "Intervalo entre envios (minutos), limite diário por grupo e horário permitido (ex: 08h às 22h).",
     },
   ];
+
 
   return (
     <AppShell
