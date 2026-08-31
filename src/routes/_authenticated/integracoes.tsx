@@ -57,6 +57,16 @@ export const Route = createFileRoute("/_authenticated/integracoes")({
     ],
   }),
   component: Integracoes,
+  errorComponent: ({ error, reset }) => (
+    <AppShell title="Integrações">
+      <div className="mx-auto max-w-lg space-y-4 py-16 text-center">
+        <AlertTriangle className="mx-auto h-10 w-10 text-destructive" />
+        <h1 className="text-xl font-semibold">Não foi possível carregar as integrações</h1>
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+        <Button onClick={reset}>Tentar novamente</Button>
+      </div>
+    </AppShell>
+  ),
 });
 
 type Kind = "marketplace" | "channel";
@@ -317,11 +327,15 @@ function Integracoes() {
   const { data, isLoading } = useQuery({
     queryKey: ["integrations"],
     queryFn: () => listIntegrations(),
+    retry: 1,
+    throwOnError: false,
   });
 
   const { data: syncLogs = [], refetch: refetchLogs } = useQuery({
     queryKey: ["sync_logs"],
     queryFn: () => fetchLogs(),
+    retry: 1,
+    throwOnError: false,
   });
 
   const [syncingSlug, setSyncingSlug] = useState<string | null>(null);
