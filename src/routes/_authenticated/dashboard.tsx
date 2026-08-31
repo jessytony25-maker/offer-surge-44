@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getWhatsAppMetrics } from "@/lib/whatsapp/whatsapp.functions";
 import { getDashboardStats } from "@/lib/dashboard.functions";
+import { listIntegrations } from "@/lib/integrations.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -77,6 +78,13 @@ function Dashboard() {
   const { data: realStats, isLoading } = useQuery({
     queryKey: ["dashboard-stats-real"],
     queryFn: () => getStatsFn(),
+  });
+
+  const getIntegrationsFn = useServerFn(listIntegrations);
+
+  const { data: integrations } = useQuery({
+    queryKey: ["integrations"],
+    queryFn: () => getIntegrationsFn(),
   });
 
   const isWaConnected = waMetrics?.connected ?? false;
@@ -199,6 +207,62 @@ function Dashboard() {
                   {waMetrics?.failed ?? 0}
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* CARD DOS MARKETPLACES */}
+          <div className="mt-4 rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="border-b border-border pb-3 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Conectores de Marketplace</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Estado e capacidade real de importação e conversão de ofertas</p>
+              </div>
+              <Button size="sm" variant="outline" asChild className="h-7 text-xs gap-1">
+                <Link to="/integracoes">
+                  Gerenciar Conexões
+                  <ChevronRight className="size-3" />
+                </Link>
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 text-xs">
+              {["shopee", "mercadolivre", "amazon", "shein"].map((mktSlug) => {
+                const mkt = integrations?.marketplaces?.find((m) => m.provider === mktSlug);
+                const isMktConnected = mkt?.status === "connected" || mkt?.status === "limited";
+                
+                let label = "Não configurado";
+                let badgeColor = "border-border bg-muted text-muted-foreground";
+
+                if (isMktConnected) {
+                  if (mktSlug === "amazon") {
+                    const hasKeys = mkt?.filledKeys?.includes("api_key") && mkt?.filledKeys?.includes("api_secret");
+                    if (hasKeys) {
+                      label = "Busca automática ativa";
+                      badgeColor = "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 font-semibold";
+                    } else {
+                      label = "Conversão manual ativa";
+                      badgeColor = "border-amber-500/40 bg-amber-500/10 text-amber-600 font-semibold";
+                    }
+                  } else {
+                    label = "Conectado";
+                    badgeColor = "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 font-semibold";
+                  }
+                } else if (mkt?.status === "error") {
+                  label = "Erro na Conexão";
+                  badgeColor = "border-destructive/40 bg-destructive/10 text-destructive font-semibold";
+                }
+
+                return (
+                  <div key={mktSlug} className="rounded-lg bg-muted/40 p-2.5 space-y-1.5 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[11px] font-semibold text-foreground uppercase">{mktSlug}</span>
+                    </div>
+                    <Badge variant="outline" className={`text-[9px] px-1.5 py-0.5 justify-center ${badgeColor}`}>
+                      {label}
+                    </Badge>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

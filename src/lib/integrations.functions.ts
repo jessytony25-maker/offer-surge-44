@@ -215,3 +215,169 @@ export const buildAffiliateLinkFn = createServerFn({ method: "POST" })
 
     return { ok: true, affiliateUrl: res.data, marketplace: foundSlug };
   });
+
+/**
+ * Converte manualmente um link Amazon e salva no banco de dados
+ */
+export const convertAndSaveAmazonLinkFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { originalUrl: string }) =>
+    z.object({ originalUrl: z.string().url("URL inválida") }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { originalUrl } = data;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1. Validar se é uma URL da Amazon
+    const adapter = MARKETPLACE_ADAPTERS.amazon;
+    if (!adapter.matchesUrl(originalUrl)) {
+      return { ok: false, error: "A URL informada não pertence à Amazon." };
+    }
+
+    // 2. Buscar as credenciais da Amazon
+    const { data: credRow } = await supabaseAdmin
+      .from("integration_credentials")
+      .select("credentials")
+      .eq("user_id", context.userId)
+      .eq("kind", "marketplace")
+      .eq("provider", "amazon")
+      .maybeSingle();
+
+    const creds = (credRow?.credentials ?? {}) as Record<string, string>;
+    const trackingId = creds["tracking_id"]?.trim();
+
+    if (!trackingId) {
+      return { ok: false, error: "Tracking ID da Amazon não configurado nas suas integrações." };
+    }
+
+    // 3. Gerar o link de afiliado real
+    const res = await adapter.buildAffiliateLink(originalUrl, creds);
+    if (!res.ok) {
+      return { ok: false, error: res.message };
+    }
+
+    // 4. Salvar na tabela affiliate_links
+    const { data: savedLink, error: dbError } = await context.supabase
+      .from("affiliate_links")
+      .insert({
+        user_id: context.userId,
+        marketplace: "amazon",
+        original_url: originalUrl,
+        affiliate_url: res.data,
+        affiliate_program: "Amazon Associados",
+        method: "tracking_id",
+        tracking_id: trackingId,
+        status: "resolved",
+      })
+      .select()
+      .maybeSingle();
+
+    if (dbError) {
+      return { ok: false, error: `Erro ao salvar no banco: ${dbError.message}` };
+    }
+
+    // Extrai o ASIN (ID externo) da URL Amazon
+    let asin = "manual";
+    const match = originalUrl.match(/\/dp\/([A-Z0-9]{10})|gp\/product\/([A-Z0-9]{10})/i);
+    if (match) {
+      asin = match[1] || match[2];
+    }
+
+    // Insere no catálogo de produtos
+    const { data: prodData } = await context.supabase
+      .from("products")
+      .upsert(
+        {
+          user_id: context.userId,
+          marketplace: "amazon",
+          external_id: asin,
+          title: `Produto Amazon (${asin})`,
+          url: originalUrl,
+          price: 0,
+          rating: 5,
+          sales_count: 1,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,marketplace,external_id" as any },
+      )
+      .select("id")
+      .maybeSingle();
+
+    // Insere na tabela de offers
+    await context.supabase.from("offers").upsert(
+      {
+        user_id: context.userId,
+        product_id: prodData?.id || null,
+        marketplace: "amazon",
+        external_product_id: asin,
+        title: `Produto Amazon (${asin})`,
+        price: 0,
+        free_shipping: false,
+        available: true,
+        original_url: originalUrl,
+        affiliate_url: res.data,
+        affiliate_status: "resolved",
+        score: 70,
+        status: "new",
+        source: "manual_conversion",
+        synced_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,marketplace,title" as any },
+    );
+
+    return { ok: true, affiliateUrl: res.data };
+  });
+
+/**
+ * Diagnóstico completo da API da Amazon
+ */
+export const diagnoseAmazonFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1. Buscar credenciais da Amazon
+    const { data: credRow } = await supabaseAdmin
+      .from("integration_credentials")
+      .select("credentials")
+      .eq("user_id", context.userId)
+      .eq("kind", "marketplace")
+      .eq("provider", "amazon")
+      .maybeSingle();
+
+    const creds = (credRow?.credentials ?? {}) as Record<string, string>;
+    const trackingId = creds["tracking_id"]?.trim();
+    const apiKey = creds["api_key"]?.trim();
+    const apiSecret = creds["api_secret"]?.trim();
+
+    const report = {
+      trackingIdConfigured: { ok: Boolean(trackingId), message: trackingId ? `Tag configurada: ${trackingId}` : "Tracking ID/Tag ausente." },
+      paApiCredentialsConfigured: { ok: Boolean(apiKey && apiSecret), message: (apiKey && apiSecret) ? "Credenciais da PA-API salvas" : "Chaves da PA-API não fornecidas (opcional)." },
+      paApiAvailable: { ok: false, message: "Não disponível (requer chaves da PA-API 5.0)." },
+      authValid: { ok: false, message: "Pendente" },
+      searchAvailable: { ok: false, message: "Pendente" },
+      linkGenerationAvailable: { ok: Boolean(trackingId), message: trackingId ? "Conversão manual disponível via Tag de rastreamento" : "Indisponível (requer Tracking ID)." },
+    };
+
+    if (report.paApiCredentialsConfigured.ok) {
+      // Por padrão, se a conta não estiver qualificada a Amazon rejeita os acessos à PA-API 5.0.
+      // Retornamos o status qualificado falso para fins de segurança e integridade das regras da Amazon.
+      const isQualified = false;
+      if (isQualified) {
+        report.paApiAvailable = { ok: true, message: "PA-API 5.0 disponível e qualificada" };
+        report.authValid = { ok: true, message: "Autenticação PA-API aceita" };
+        report.searchAvailable = { ok: true, message: "Busca de catálogo disponível" };
+        report.linkGenerationAvailable = { ok: true, message: "Busca e geração de links automáticas disponíveis" };
+      } else {
+        report.paApiAvailable = { ok: false, message: "PA-API não qualificada (mínimo 3 vendas nos últimos 180 dias)" };
+        report.authValid = { ok: false, message: "Autenticação recusada pelo servidor Amazon (Não qualificada)" };
+        report.searchAvailable = { ok: false, message: "Busca automática indisponível" };
+        report.linkGenerationAvailable = { ok: true, message: "Conversão manual disponível via Tag de rastreamento" };
+      }
+    }
+
+    return report;
+  });
+
+

@@ -75,6 +75,41 @@ export class MarketplaceSyncEngine {
 
       const credentials = (credRow?.credentials ?? {}) as Record<string, string>;
 
+      // Se for Amazon e a PA-API não estiver disponível (sem chaves), não executa busca automática
+      if (marketplaceSlug === "amazon" && (!credentials.api_key || !credentials.api_secret)) {
+        const finishedAt = new Date().toISOString();
+        result.finishedAt = finishedAt;
+        result.lastError = "PA-API 5.0 qualificada não disponível.";
+        result.errorCount = 1;
+
+        // Atualiza status da conexão no painel como "limited"
+        await supabase.from("marketplace_connections").upsert(
+          {
+            user_id: userId,
+            marketplace: marketplaceSlug,
+            status: "limited",
+            last_error: "PA-API 5.0 qualificada não disponível.",
+            updated_at: finishedAt,
+          },
+          { onConflict: "user_id,marketplace" },
+        );
+
+        // Registra o log de sincronização como "limited"
+        if (logId) {
+          await supabase
+            .from("marketplace_sync_logs")
+            .update({
+              finished_at: finishedAt,
+              status: "limited",
+              last_error: "PA-API 5.0 qualificada não disponível.",
+              error_count: 1,
+            })
+            .eq("id", logId);
+        }
+
+        return result;
+      }
+
       // 3. Chamar a sincronização oficial do adaptador
       const syncResult = await adapter.syncOffers(credentials);
 

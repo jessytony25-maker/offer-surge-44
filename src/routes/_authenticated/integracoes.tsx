@@ -26,6 +26,8 @@ import {
   saveIntegration,
   disconnectIntegration,
   syncMarketplace,
+  convertAndSaveAmazonLinkFn,
+  diagnoseAmazonFn,
 } from "@/lib/integrations.functions";
 import { updateAutoSyncIntervalFn, getLatestSyncLogs } from "@/lib/sync/sync.functions";
 import { Button } from "@/components/ui/button";
@@ -139,6 +141,71 @@ const INTERVALS = [
   { value: "daily", label: "Diariamente" },
 ];
 
+function AmazonManualConverter() {
+  const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [convertedUrl, setConvertedUrl] = useState("");
+  
+  const convertSaveFn = useServerFn(convertAndSaveAmazonLinkFn);
+
+  const handleConvert = async () => {
+    if (!url.trim()) {
+      toast.warning("Cole uma URL da Amazon válida.");
+      return;
+    }
+    setLoading(true);
+    setConvertedUrl("");
+    try {
+      const res = await convertSaveFn({ data: { originalUrl: url.trim() } });
+      if (res.ok) {
+        setConvertedUrl(res.affiliateUrl);
+        toast.success("Link convertido e salvo no catálogo!");
+        setUrl("");
+      } else {
+        toast.error(res.error || "Erro ao converter link.");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erro de conexão com o servidor.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2 mt-2">
+      <div className="flex items-center gap-1.5">
+        <Link2 className="size-3.5 text-primary" />
+        <span className="text-[11px] font-semibold text-foreground">Converter Link Amazon</span>
+      </div>
+      <p className="text-[10px] text-muted-foreground leading-tight">
+        Cole a URL de um produto Amazon para convertê-la com sua Tag de Afiliado e salvá-la no catálogo.
+      </p>
+      <div className="flex gap-2">
+        <Input
+          placeholder="ex: https://www.amazon.com.br/dp/..."
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          className="h-8 text-xs font-mono bg-background"
+        />
+        <Button
+          size="sm"
+          onClick={handleConvert}
+          disabled={loading || !url.trim()}
+          className="h-8 text-xs shrink-0"
+        >
+          {loading ? "Convertendo..." : "Converter"}
+        </Button>
+      </div>
+      {convertedUrl && (
+        <div className="rounded bg-emerald-500/5 border border-emerald-500/10 p-2 text-[10px] space-y-1">
+          <p className="font-semibold text-emerald-800">Link Convertido:</p>
+          <p className="font-mono break-all text-emerald-700 select-all cursor-pointer">{convertedUrl}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function IntegrationCard({
   kind,
   slug,
@@ -153,6 +220,8 @@ function IntegrationCard({
   isSyncing,
   onChangeInterval,
   isUpdatingInterval,
+  onDiagnose,
+  isDiagnosing,
 }: {
   kind: Kind;
   slug: string;
@@ -167,12 +236,31 @@ function IntegrationCard({
   isSyncing?: boolean;
   onChangeInterval?: (interval: string) => void;
   isUpdatingInterval?: boolean;
+  onDiagnose?: () => void;
+  isDiagnosing?: boolean;
 }) {
   const status = isSyncing ? "syncing" : row?.status ?? "not_configured";
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG["not_configured"];
-  const isConnected = row?.status === "connected" || status === "synced";
+  const isConnected = row?.status === "connected" || row?.status === "limited" || status === "synced";
   const missing = fields.filter((f) => f.required && !row?.filledKeys?.includes(f.key));
   const adapter = MARKETPLACE_ADAPTERS[slug as MarketplaceSlug];
+
+  let displayLabel = "";
+  let badgeStyleClass = "";
+
+  if (slug === "amazon" && isConnected) {
+    const hasKeys = row?.filledKeys?.includes("api_key") && row?.filledKeys?.includes("api_secret");
+    if (hasKeys) {
+      displayLabel = "Amazon conectada — Busca automática disponível";
+      badgeStyleClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-semibold";
+    } else {
+      displayLabel = "Amazon conectada — somente conversão manual de links";
+      badgeStyleClass = "border-amber-500/30 bg-amber-500/10 text-amber-600 font-semibold";
+    }
+  } else {
+    const cfg = STATUS_CONFIG[status] || STATUS_CONFIG["not_configured"];
+    displayLabel = cfg.label;
+    badgeStyleClass = cfg.badgeClass;
+  }
 
   return (
     <div className="flex flex-col justify-between rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm hover:shadow-md transition-shadow">
@@ -184,8 +272,8 @@ function IntegrationCard({
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
           </div>
-          <Badge variant="outline" className={`text-[10px] px-2 py-0.5 uppercase ${cfg?.badgeClass ?? ""}`}>
-            {cfg?.label ?? status}
+          <Badge variant="outline" className={`text-[10px] px-2 py-0.5 uppercase ${badgeStyleClass}`}>
+            {displayLabel}
           </Badge>
         </div>
 
@@ -217,6 +305,11 @@ function IntegrationCard({
               </p>
             )}
           </div>
+        )}
+
+        {/* Amazon Manual Link Converter Box */}
+        {slug === "amazon" && isConnected && !(row?.filledKeys?.includes("api_key") && row?.filledKeys?.includes("api_secret")) && (
+          <AmazonManualConverter />
         )}
 
         {/* Informações de sincronização e erros */}
@@ -285,6 +378,17 @@ function IntegrationCard({
               {isSyncing ? "Sincronizando..." : "Sincronizar Agora"}
             </Button>
           )}
+          {isConnected && slug === "amazon" && onDiagnose && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs gap-1"
+              onClick={onDiagnose}
+              disabled={isDiagnosing}
+            >
+              Diagnosticar
+            </Button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -340,6 +444,11 @@ function Integracoes() {
 
   const [syncingSlug, setSyncingSlug] = useState<string | null>(null);
   const [updatingIntervalSlug, setUpdatingIntervalSlug] = useState<string | null>(null);
+
+  // Estados do Diagnóstico Amazon
+  const [amazonDiagnosis, setAmazonDiagnosis] = useState<any>(null);
+  const [isDiagnosingAmazon, setIsDiagnosingAmazon] = useState(false);
+  const [diagnoseModalOpen, setDiagnoseModalOpen] = useState(false);
 
   const [target, setTarget] = useState<{
     kind: Kind;
@@ -413,6 +522,21 @@ function Integracoes() {
     },
   });
 
+  const runAmazonDiag = useServerFn(diagnoseAmazonFn);
+  const handleAmazonDiagnose = async () => {
+    setIsDiagnosingAmazon(true);
+    setAmazonDiagnosis(null);
+    setDiagnoseModalOpen(true);
+    try {
+      const res = await runAmazonDiag();
+      setAmazonDiagnosis(res);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao executar diagnóstico da Amazon.");
+    } finally {
+      setIsDiagnosingAmazon(false);
+    }
+  };
+
   const marketplaceRows = useMemo(
     () => new Map((data?.marketplaces ?? []).map((r) => [r.provider, r as StatusRow])),
     [data],
@@ -477,6 +601,8 @@ function Integracoes() {
                     : undefined
                 }
                 isUpdatingInterval={updatingIntervalSlug === a.slug}
+                onDiagnose={a.slug === "amazon" ? handleAmazonDiagnose : undefined}
+                isDiagnosing={a.slug === "amazon" ? isDiagnosingAmazon : undefined}
               />
             ))}
           </div>
@@ -586,7 +712,9 @@ function Integracoes() {
                                     ? "border-sky-500/30 bg-sky-500/10 text-sky-700"
                                     : log.status === "running"
                                       ? "border-amber-500/30 bg-amber-500/10 text-amber-700 animate-pulse"
-                                      : "border-destructive/30 bg-destructive/10 text-destructive"
+                                      : log.status === "limited"
+                                        ? "border-amber-500/30 bg-amber-500/10 text-amber-600 font-semibold"
+                                        : "border-destructive/30 bg-destructive/10 text-destructive"
                               }`}
                             >
                               {log.status === "completed"
@@ -595,7 +723,9 @@ function Integracoes() {
                                   ? "Parcial"
                                   : log.status === "running"
                                     ? "Executando"
-                                    : "Falhou"}
+                                    : log.status === "limited"
+                                      ? "Limitado"
+                                      : "Falhou"}
                             </Badge>
                           </td>
                           <td className="p-3 text-right font-mono font-bold">{log.items_found}</td>
@@ -697,6 +827,70 @@ function Integracoes() {
             >
               {saveMutation.isPending ? "Validando e Salvando..." : "Salvar e Validar"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DE DIAGNÓSTICO DA AMAZON */}
+      <Dialog open={diagnoseModalOpen} onOpenChange={setDiagnoseModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">Diagnóstico da Integração Amazon API</DialogTitle>
+            <DialogDescription className="text-xs">
+              Auditoria e mapeamento real das capacidades da conta de associados.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-3 text-xs">
+            {isDiagnosingAmazon ? (
+              <div className="py-6 text-center space-y-2">
+                <RefreshCw className="size-6 text-primary animate-spin mx-auto" />
+                <p className="text-muted-foreground">Executando testes no gateway de afiliados Amazon...</p>
+              </div>
+            ) : amazonDiagnosis ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between py-1 border-b border-border/40">
+                  <span className="text-muted-foreground">1. Tracking ID configurado</span>
+                  <Badge variant="outline" className={`text-[10px] ${amazonDiagnosis.trackingIdConfigured.ok ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+                    {amazonDiagnosis.trackingIdConfigured.ok ? "✓ " : "✗ "} {amazonDiagnosis.trackingIdConfigured.message}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between py-1 border-b border-border/40">
+                  <span className="text-muted-foreground">2. Credenciais de API</span>
+                  <Badge variant="outline" className={`text-[10px] ${amazonDiagnosis.paApiCredentialsConfigured.ok ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600" : "border-muted-foreground bg-muted text-muted-foreground"}`}>
+                    {amazonDiagnosis.paApiCredentialsConfigured.ok ? "✓ " : "⚪ "} {amazonDiagnosis.paApiCredentialsConfigured.message}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between py-1 border-b border-border/40">
+                  <span className="text-muted-foreground">3. PA-API disponível</span>
+                  <Badge variant="outline" className={`text-[10px] ${amazonDiagnosis.paApiAvailable.ok ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600" : "border-amber-500/30 bg-amber-500/10 text-amber-600"}`}>
+                    {amazonDiagnosis.paApiAvailable.ok ? "✓ " : "⚪ "} {amazonDiagnosis.paApiAvailable.message}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between py-1 border-b border-border/40">
+                  <span className="text-muted-foreground">4. Autenticação válida</span>
+                  <Badge variant="outline" className={`text-[10px] ${amazonDiagnosis.authValid.ok ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600" : "border-amber-500/30 bg-amber-500/10 text-amber-600"}`}>
+                    {amazonDiagnosis.authValid.ok ? "✓ " : "⚪ "} {amazonDiagnosis.authValid.message}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between py-1 border-b border-border/40">
+                  <span className="text-muted-foreground">5. Busca disponível</span>
+                  <Badge variant="outline" className={`text-[10px] ${amazonDiagnosis.searchAvailable.ok ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600" : "border-amber-500/30 bg-amber-500/10 text-amber-600"}`}>
+                    {amazonDiagnosis.searchAvailable.ok ? "✓ " : "⚪ "} {amazonDiagnosis.searchAvailable.message}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-muted-foreground">6. Geração de links</span>
+                  <Badge variant="outline" className={`text-[10px] ${amazonDiagnosis.linkGenerationAvailable.ok ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+                    {amazonDiagnosis.linkGenerationAvailable.ok ? "✓ " : "✗ "} {amazonDiagnosis.linkGenerationAvailable.message}
+                  </Badge>
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted-foreground italic">Erro ao carregar o relatório de auditoria.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button size="sm" onClick={() => setDiagnoseModalOpen(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
