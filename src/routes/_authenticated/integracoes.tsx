@@ -57,6 +57,16 @@ export const Route = createFileRoute("/_authenticated/integracoes")({
     ],
   }),
   component: Integracoes,
+  errorComponent: ({ error, reset }) => (
+    <AppShell>
+      <div className="mx-auto max-w-lg space-y-4 py-16 text-center">
+        <AlertTriangle className="mx-auto h-10 w-10 text-destructive" />
+        <h1 className="text-xl font-semibold">Não foi possível carregar as integrações</h1>
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+        <Button onClick={reset}>Tentar novamente</Button>
+      </div>
+    </AppShell>
+  ),
 });
 
 type Kind = "marketplace" | "channel";
