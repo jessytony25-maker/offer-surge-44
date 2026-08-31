@@ -67,12 +67,15 @@ export const saveAutomation = createServerFn({ method: "POST" })
     };
 
     if (data.id) {
-      const { error } = await context.supabase
+      const { data: updated, error } = await context.supabase
         .from("automations")
         .update(row)
-        .eq("id", data.id);
+        .eq("id", data.id)
+        .select("id")
+        .maybeSingle();
       if (error) throw new Error(error.message);
-      return { id: data.id };
+      // Se nenhuma linha foi atualizada, a regra ainda não existe: cria de verdade.
+      if (updated?.id) return { id: updated.id };
     }
 
     const { data: inserted, error } = await context.supabase
