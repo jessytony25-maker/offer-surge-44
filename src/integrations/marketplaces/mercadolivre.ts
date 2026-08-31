@@ -1,22 +1,32 @@
 /**
  * MERCADO LIVRE ADAPTER
  *
- * Integração em 2 componentes:
- * 1. Catálogo / Ofertas: API oficial de busca no Brasil (sites/MLB/search) e itens (items/:id).
- * 2. Links de Afiliado: Injeção dos parâmetros matt_word + matt_tool ou extração via extensão/sessão do navegador.
+ * Dois componentes claramente separados:
+ *
+ * 1. CATÁLOGO (api.mercadolibre.com) — exige OAuth. Chamadas anônimas são
+ *    recusadas com HTTP 403 (PolicyAgent). Sem access token válido não há catálogo.
+ * 2. AFILIADOS — o link só é considerado real quando a URL oficial do produto
+ *    recebe os parâmetros de rastreamento matt_word/matt_tool e passa na validação.
+ *    Nunca é gerado link fictício: sem parâmetros válidos, affiliateStatus = "pending".
  */
 
 import {
   type MarketplaceAdapter,
   type AdapterResult,
   type NormalizedProduct,
-  type SearchParams,
   type SyncReport,
   notConfigured,
   CAP_FULL,
 } from "./types";
+import {
+  applyMattParams,
+  credsFromRecord,
+  meliDiagnose,
+  meliFetch,
+  validateAffiliateUrl,
+} from "@/lib/mercadolivre.server";
 
-function normalizeMeliItem(item: any, affiliateUrl?: string): NormalizedProduct {
+function normalizeMeliItem(item: any, affiliateUrl?: string | null): NormalizedProduct {
   const price = typeof item.price === "number" ? item.price : 0;
   const originalPrice = typeof item.original_price === "number" ? item.original_price : null;
   const discountPct =
@@ -24,20 +34,18 @@ function normalizeMeliItem(item: any, affiliateUrl?: string): NormalizedProduct 
       ? Math.round(((originalPrice - price) / originalPrice) * 100)
       : null;
 
-  // Imagem em alta resolução
   const rawImage = item.thumbnail || item.pictures?.[0]?.url || "";
   const imageUrl = rawImage.replace(/-I\.jpg$/i, "-O.jpg").replace(/^http:\/\//i, "https://");
-
   const permalink = item.permalink || "";
-  const finalAffiliate = affiliateUrl || permalink;
 
   return {
     externalId: String(item.id || ""),
     title: item.title || "Produto Mercado Livre",
     imageUrl: imageUrl || null,
     url: permalink,
-    affiliateUrl: finalAffiliate,
-    affiliateStatus: affiliateUrl && affiliateUrl !== permalink ? "resolved" : "pending",
+    // Sem link de afiliado real, mantemos a URL original e o status pendente.
+    affiliateUrl: affiliateUrl || permalink,
+    affiliateStatus: affiliateUrl ? "resolved" : "pending",
     source: "mercadolivre",
     category: item.category_id || undefined,
     price,
@@ -56,155 +64,163 @@ function normalizeMeliItem(item: any, affiliateUrl?: string): NormalizedProduct 
 export const mercadoLivreAdapter: MarketplaceAdapter = {
   slug: "mercadolivre",
   name: "Mercado Livre",
-  program: "Mercado Livre Afiliados + API de Catálogo",
-  docsUrl: "https://www.mercadolivre.com.br/afiliados/home",
+  program: "Mercado Livre Afiliados + API de Catálogo (OAuth)",
+  docsUrl: "https://developers.mercadolivre.com.br/pt_br/autenticacao-e-autorizacao",
   credentialFields: [
+    {
+      key: "client_id",
+      label: "Client ID (App ID)",
+      required: true,
+      placeholder: "Ex: 1234567890123456",
+      help: "Mercado Livre Developers → suas aplicações → App ID.",
+    },
+    {
+      key: "client_secret",
+      label: "Client Secret",
+      secret: true,
+      required: true,
+      placeholder: "Ex: abc123...",
+      help: "Chave secreta da mesma aplicação. Usada apenas no servidor para renovar o token.",
+    },
+    {
+      key: "access_token",
+      label: "Access Token OAuth",
+      secret: true,
+      required: true,
+      placeholder: "APP_USR-...",
+      help: "Obrigatório: a API do Mercado Livre recusa (HTTP 403) qualquer consulta sem token.",
+    },
+    {
+      key: "refresh_token",
+      label: "Refresh Token",
+      secret: true,
+      placeholder: "TG-...",
+      help: "Permite renovar o access token automaticamente quando ele expira (~6h).",
+    },
     {
       key: "affiliate_id",
       label: "Etiqueta de Afiliado (matt_word)",
-      required: true,
       placeholder: "Ex: seu_id_afiliado",
-      help: "Encontrada no seu link de afiliado do Mercado Livre (parâmetro matt_word).",
+      help: "Parâmetro matt_word do seu link de afiliado. Sem ele o link não é considerado afiliado.",
     },
     {
       key: "tracking_id",
       label: "ID da Ferramenta (matt_tool)",
-      required: true,
       placeholder: "Ex: 12345678",
-      help: "Identificador da ferramenta de afiliado (parâmetro matt_tool).",
-    },
-    {
-      key: "api_key",
-      label: "Access Token OAuth (Opcional)",
-      secret: true,
-      placeholder: "APP_USR-...",
-      help: "Para contas que utilizam a API oficial Mercado Livre Developers.",
+      help: "Parâmetro matt_tool do seu link de afiliado.",
     },
   ],
   capabilities: {
-    searchProducts: CAP_FULL,
-    listOffers: CAP_FULL,
-    productDetails: CAP_FULL,
+    searchProducts: { supported: true, level: "partial", reason: "Requer access token OAuth válido (403 sem token)" },
+    listOffers: { supported: true, level: "partial", reason: "Requer access token OAuth válido" },
+    productDetails: { supported: true, level: "partial", reason: "Requer access token OAuth válido" },
     affiliateLinkGeneration: {
       supported: true,
-      level: "full",
-      reason: "Geração por parâmetros oficiais de rastreamento matt_word/matt_tool",
+      level: "partial",
+      reason:
+        "Parâmetros oficiais matt_word/matt_tool. Contas cujo programa exige a extensão do Mercado Livre precisam gerar o link pela extensão.",
     },
     priceData: CAP_FULL,
     imageData: CAP_FULL,
     availabilityData: CAP_FULL,
-    autoSync: CAP_FULL,
+    autoSync: { supported: true, level: "partial", reason: "Só é liberado após a conexão ser validada" },
   },
   matchesUrl: (url) => /(mercadolivre|mercadolibre)\.[a-z.]+/i.test(url),
 
   async testConnection(credentials): Promise<AdapterResult<{ message: string; details?: string }>> {
-    const mattWord = credentials["affiliate_id"]?.trim();
-    const mattTool = credentials["tracking_id"]?.trim();
+    const diag = await meliDiagnose(credentials);
+    const detail = diag.steps
+      .map((s) => `${s.status === "pass" ? "✅" : s.status === "fail" ? "❌" : "⏭️"} ${s.id}. ${s.name}: ${s.detail}`)
+      .join("\n");
 
-    if (!mattWord) return notConfigured("Mercado Livre", "Etiqueta (matt_word)");
-    if (!mattTool) return notConfigured("Mercado Livre", "ID da Ferramenta (matt_tool)");
-
-    try {
-      const res = await fetch("https://api.mercadolibre.com/sites/MLB/search?q=ofertas&limit=1");
-      if (!res.ok) {
-        return {
-          ok: false,
-          state: "error",
-          message: `Mercado Livre API respondeu HTTP ${res.status}. Verifique conexão com a internet.`,
-        };
-      }
-
-      const data = await res.json();
-      const count = Array.isArray(data.results) ? data.results.length : 0;
-
-      return {
-        ok: true,
-        data: {
-          message: "API do Mercado Livre e parâmetros de afiliado validados com sucesso!",
-          details: `Etiqueta "${mattWord}" e Ferramenta "${mattTool}" ativas. API MLB retornou ${count} item de teste.`,
-        },
-      };
-    } catch (err: any) {
-      return {
-        ok: false,
-        state: "error",
-        message: `Falha ao contatar a API do Mercado Livre: ${err.message || "Erro de rede"}`,
-      };
+    if (diag.connectionStatus === "connected") {
+      return { ok: true, data: { message: diag.summary, details: detail } };
     }
+    return {
+      ok: false,
+      state: diag.connectionStatus === "not_configured" ? "not_configured" : "error",
+      message: `${diag.summary}\n\n${detail}`,
+    };
   },
 
   async searchProducts(credentials, params): Promise<AdapterResult<NormalizedProduct[]>> {
     const keyword = params?.keyword || "ofertas";
     const limit = params?.limit || 20;
+    const creds = credsFromRecord(credentials);
 
-    try {
-      const url = `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(keyword)}&limit=${limit}`;
-      const res = await fetch(url);
-      if (!res.ok) {
-        return { ok: false, state: "error", message: `Mercado Livre retornou status HTTP ${res.status}` };
-      }
-      const data = await res.json();
-      const items = Array.isArray(data.results) ? data.results : [];
-
-      const products: NormalizedProduct[] = [];
-      for (const item of items) {
-        const affRes = await this.buildAffiliateLink(item.permalink || "", credentials);
-        products.push(normalizeMeliItem(item, affRes.ok ? affRes.data : undefined));
-      }
-
-      return { ok: true, data: products };
-    } catch (err: any) {
-      return { ok: false, state: "error", message: err.message || "Erro ao buscar ofertas no Mercado Livre." };
+    const res = await meliFetch<{ results?: any[] }>(
+      `/sites/MLB/search?q=${encodeURIComponent(keyword)}&limit=${limit}`,
+      creds,
+      { step: "catalog" },
+    );
+    if (!res.ok) {
+      return { ok: false, state: res.httpStatus === null ? "error" : "error", message: res.message };
     }
+
+    const items = res.data.results ?? [];
+    const products = items.map((item) => {
+      const affiliate =
+        creds.mattWord && creds.mattTool
+          ? applyMattParams(item.permalink || "", creds.mattWord, creds.mattTool)
+          : null;
+      const valid =
+        affiliate && validateAffiliateUrl(affiliate, creds.mattWord!, creds.mattTool!) ? affiliate : null;
+      return normalizeMeliItem(item, valid);
+    });
+
+    return { ok: true, data: products };
   },
 
   async listOffers(credentials, params): Promise<AdapterResult<NormalizedProduct[]>> {
-    return this.searchProducts(credentials, { ...params, keyword: params?.keyword || "super ofertas" });
+    return this.searchProducts(credentials, { ...params, keyword: params?.keyword || "ofertas do dia" });
   },
 
   async getProduct(externalId, credentials): Promise<AdapterResult<NormalizedProduct>> {
-    try {
-      const res = await fetch(`https://api.mercadolibre.com/items/${encodeURIComponent(externalId)}`);
-      if (!res.ok) {
-        return { ok: false, state: "error", message: `Item ${externalId} não encontrado no Mercado Livre.` };
-      }
-      const item = await res.json();
-      const affRes = await this.buildAffiliateLink(item.permalink || "", credentials);
-      return {
-        ok: true,
-        data: normalizeMeliItem(item, affRes.ok ? affRes.data : undefined),
-      };
-    } catch (err: any) {
-      return { ok: false, state: "error", message: err.message || "Erro ao consultar item no Mercado Livre." };
-    }
+    const creds = credsFromRecord(credentials);
+    const res = await meliFetch<any>(`/items/${encodeURIComponent(externalId)}`, creds, { step: "product" });
+    if (!res.ok) return { ok: false, state: "error", message: res.message };
+
+    const item = res.data;
+    const affiliate =
+      creds.mattWord && creds.mattTool
+        ? applyMattParams(item.permalink || "", creds.mattWord, creds.mattTool)
+        : null;
+    return { ok: true, data: normalizeMeliItem(item, affiliate) };
   },
 
   async buildAffiliateLink(originalUrl, credentials, subId): Promise<AdapterResult<string>> {
-    const mattWord = credentials["affiliate_id"]?.trim();
-    const mattTool = credentials["tracking_id"]?.trim();
-
-    if (!mattWord || !mattTool) {
-      return notConfigured("Mercado Livre", "Etiqueta (matt_word) e Ferramenta (matt_tool)");
-    }
-
-    try {
-      const url = new URL(originalUrl);
-      url.searchParams.set("matt_word", mattWord);
-      url.searchParams.set("matt_tool", mattTool);
-      if (subId) {
-        url.searchParams.set("matt_seller", subId);
-      }
-      return { ok: true, data: url.toString() };
-    } catch {
-      const separator = originalUrl.includes("?") ? "&" : "?";
+    const creds = credsFromRecord(credentials);
+    if (!creds.mattWord || !creds.mattTool) {
       return {
-        ok: true,
-        data: `${originalUrl}${separator}matt_word=${mattWord}&matt_tool=${mattTool}${subId ? `&matt_seller=${subId}` : ""}`,
+        ok: false,
+        state: "not_configured",
+        message:
+          "Link de afiliado do Mercado Livre não gerado: informe matt_word e matt_tool. Se o seu programa exige a ferramenta oficial, a extensão do Mercado Livre é necessária para gerar o link afiliado.",
       };
     }
+
+    const url = applyMattParams(originalUrl, creds.mattWord, creds.mattTool, subId);
+    if (!url || !validateAffiliateUrl(url, creds.mattWord, creds.mattTool)) {
+      return {
+        ok: false,
+        state: "error",
+        message: `URL inválida para afiliação do Mercado Livre: ${originalUrl}. O link precisa ser uma URL oficial do domínio mercadolivre.com.br.`,
+      };
+    }
+    return { ok: true, data: url };
   },
 
   async syncOffers(credentials, params): Promise<AdapterResult<SyncReport>> {
+    const creds = credsFromRecord(credentials);
+    if (!creds.mattWord || !creds.mattTool) {
+      return {
+        ok: false,
+        state: "not_configured",
+        message:
+          "Sincronização do Mercado Livre bloqueada: sem matt_word/matt_tool não é possível gerar link de afiliado real, então nenhuma oferta pode ser publicada.",
+      };
+    }
+
     const searchRes = await this.listOffers(credentials, params);
     if (!searchRes.ok) return searchRes;
 
@@ -216,7 +232,7 @@ export const mercadoLivreAdapter: MarketplaceAdapter = {
     for (const item of items) {
       if (!item.externalId || !item.title) {
         skipped++;
-        errors.push(`Item ignorado por falta de dados básicos (id=${item.externalId})`);
+        errors.push(`Item ignorado por falta de dados básicos (id=${item.externalId}).`);
         continue;
       }
       if (item.price <= 0) {
@@ -224,18 +240,20 @@ export const mercadoLivreAdapter: MarketplaceAdapter = {
         errors.push(`Item ${item.externalId} ignorado por preço zerado.`);
         continue;
       }
+      // Regra: só entra no catálogo publicável quando o link de afiliado foi realmente resolvido.
+      if (item.affiliateStatus !== "resolved") {
+        skipped++;
+        errors.push(`Item ${item.externalId} ignorado: link de afiliado não resolvido.`);
+        continue;
+      }
       products.push(item);
     }
 
     return {
       ok: true,
-      data: {
-        found: items.length,
-        imported: products.length,
-        skipped,
-        errors,
-        products,
-      },
+      data: { found: items.length, imported: products.length, skipped, errors, products },
     };
   },
 };
+
+export { notConfigured };
