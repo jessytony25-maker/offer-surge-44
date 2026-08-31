@@ -8,7 +8,7 @@ export const telegramBotStatus = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { getCredentials } = await import("@/lib/credentials.server");
     const { tgGetMe } = await import("@/lib/telegram.server");
-    const creds = await getCredentials(context.userId, "channel", "telegram");
+    const creds = await getCredentials(context.supabase, context.userId, "channel", "telegram");
     const token = creds["bot_token"];
     if (!token) {
       return { connected: false as const, message: "Bot Token não configurado." };
@@ -33,7 +33,7 @@ export const syncTelegramGroups = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { getCredentials } = await import("@/lib/credentials.server");
     const { tgDiscoverChats } = await import("@/lib/telegram.server");
-    const creds = await getCredentials(context.userId, "channel", "telegram");
+    const creds = await getCredentials(context.supabase, context.userId, "channel", "telegram");
     const token = creds["bot_token"];
     if (!token) throw new Error("Conecte o Telegram em Integrações antes de sincronizar.");
 
@@ -84,7 +84,7 @@ export const sendTelegramMessage = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { getCredentials } = await import("@/lib/credentials.server");
     const { tgSendMessage } = await import("@/lib/telegram.server");
-    const creds = await getCredentials(context.userId, "channel", "telegram");
+    const creds = await getCredentials(context.supabase, context.userId, "channel", "telegram");
     const token = creds["bot_token"];
     if (!token) throw new Error("Conecte o Telegram em Integrações.");
 

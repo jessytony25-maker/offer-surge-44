@@ -142,7 +142,7 @@ export async function shopeeSearchProducts(creds: ShopeeCreds, keyword?: string,
 }
 
 const GENERATE_SHORT_LINK_MUTATION = `
-mutation generateShortLink($originUrl: String!, $subIds: [String]) {
+mutation generateShortLink($originUrl: String!, $subIds: [String!]) {
   generateShortLink(input: { originUrl: $originUrl, subIds: $subIds }) {
     shortLink
   }

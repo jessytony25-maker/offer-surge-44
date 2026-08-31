@@ -133,8 +133,7 @@ export class AffiliateLinkResolver {
     }
 
     // 3. Busca credenciais de afiliado do usuário para o marketplace
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: credRow } = await supabaseAdmin
+    const { data: credRow } = await supabase
       .from("integration_credentials")
       .select("credentials")
       .eq("user_id", userId)

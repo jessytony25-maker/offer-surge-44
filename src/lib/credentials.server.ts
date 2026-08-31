@@ -1,12 +1,13 @@
-/** Leitura server-only das credenciais salvas em integration_credentials. */
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+/** Leitura das credenciais salvas em integration_credentials (RLS por usuário). */
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export async function getCredentials(
+  supabase: SupabaseClient,
   userId: string,
   kind: "marketplace" | "channel",
   provider: string,
 ): Promise<Record<string, string>> {
-  const { data } = await supabaseAdmin
+  const { data } = await supabase
     .from("integration_credentials")
     .select("credentials")
     .eq("user_id", userId)
