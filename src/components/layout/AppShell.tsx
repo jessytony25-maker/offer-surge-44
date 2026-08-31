@@ -12,9 +12,13 @@ import {
   ListChecks,
   ShoppingBag,
   MessageSquare,
+  ShieldCheck,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { amIAdmin } from "@/lib/admin.functions";
 import { BRAND } from "@/lib/branding";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -34,9 +38,18 @@ const NAV = [
 
 function NavList({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const amIAdminFn = useServerFn(amIAdmin);
+  const { data: adminInfo } = useQuery({
+    queryKey: ["am-i-admin"],
+    queryFn: () => amIAdminFn(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const items = adminInfo?.isAdmin
+    ? [...NAV, { to: "/admin", label: "Admin", icon: ShieldCheck } as const]
+    : NAV;
   return (
     <nav className="flex flex-col gap-1">
-      {NAV.map(({ to, label, icon: Icon }) => {
+      {items.map(({ to, label, icon: Icon }) => {
         const active = pathname === to || (to === "/whatsapp/conexoes" && pathname.startsWith("/whatsapp"));
         return (
           <Link
