@@ -35,6 +35,9 @@ import {
   refreshWhatsAppQrCode,
   disconnectWhatsAppSession,
   syncWhatsAppGroups,
+  runWhatsAppDiagnosis,
+  sendWhatsAppTestMessageFn,
+  listWhatsAppGroups,
 } from "@/lib/whatsapp/whatsapp.functions";
 
 export const Route = createFileRoute("/_authenticated/whatsapp/conexoes")({
@@ -100,16 +103,32 @@ function WhatsAppConexoesPage() {
   const [apiKey, setApiKey] = useState("");
   const [instanceName, setInstanceName] = useState("");
 
+  // States de diagnóstico e teste
+  const [diagnosis, setDiagnosis] = useState<any>(null);
+  const [isDiagnosing, setIsDiagnosing] = useState(false);
+  const [testGroupId, setTestGroupId] = useState("");
+  const [testMessage, setTestMessage] = useState("Olá! Esta é uma mensagem de teste enviada de forma 100% real através do Oferta Hub.");
+  const [isSendingTest, setIsSendingTest] = useState(false);
+
   const fetchConn = useServerFn(getWhatsAppConnection);
   const checkStatusFn = useServerFn(checkWhatsAppStatus);
   const saveConfigFn = useServerFn(saveWhatsAppGatewayConfig);
   const refreshQrFn = useServerFn(refreshWhatsAppQrCode);
   const disconnectFn = useServerFn(disconnectWhatsAppSession);
   const syncGroupsFn = useServerFn(syncWhatsAppGroups);
+  const listGroupsFn = useServerFn(listWhatsAppGroups);
+  const diagnoseFn = useServerFn(runWhatsAppDiagnosis);
+  const sendTestFn = useServerFn(sendWhatsAppTestMessageFn);
 
   const { data: conn, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["whatsapp-connection"],
     queryFn: () => fetchConn(),
+  });
+
+  const { data: userGroups = [], refetch: refetchGroups } = useQuery({
+    queryKey: ["whatsapp-groups-list"],
+    queryFn: () => listGroupsFn(),
+    enabled: conn?.status === "connected",
   });
 
   // Preenche dados ao carregar
@@ -216,6 +235,41 @@ function WhatsAppConexoesPage() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao sincronizar grupos reais."),
   });
+
+  const handleDiagnose = async () => {
+    setIsDiagnosing(true);
+    setDiagnosis(null);
+    try {
+      const res = await diagnoseFn();
+      setDiagnosis(res);
+      toast.success("Diagnóstico concluído!");
+      refetch();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao rodar diagnóstico");
+    } finally {
+      setIsDiagnosing(false);
+    }
+  };
+
+  const handleSendTestMessage = async () => {
+    if (!testGroupId) {
+      toast.warning("Selecione um grupo real antes de enviar o teste.");
+      return;
+    }
+    setIsSendingTest(true);
+    try {
+      const res = await sendTestFn({ data: { groupId: testGroupId, message: testMessage } });
+      if (res.ok) {
+        toast.success("Mensagem de teste enviada com sucesso!");
+      } else {
+        toast.error(res.error || "Erro ao enviar mensagem de teste");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Erro no envio do teste");
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
 
   const status = conn?.status || "not_configured";
   const statusInfo = STATUS_CONFIG[status] || STATUS_CONFIG["not_configured"];
@@ -506,6 +560,183 @@ function WhatsAppConexoesPage() {
                   >
                     <RefreshCw className={`size-3.5 ${refreshQrMutation.isPending ? "animate-spin" : ""}`} />
                     Atualizar QR Code
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PAINEL DE DIAGNÓSTICO DO GATEWAY */}
+          {conn?.api_url && (
+            <div className="rounded-xl border border-border bg-card p-4 mt-4 space-y-4">
+              <div className="flex items-center justify-between border-b border-border pb-2">
+                <div className="flex items-center gap-2">
+                  <Server className="size-4 text-emerald-600" />
+                  <h3 className="text-xs font-semibold text-foreground">Diagnóstico de Conexão do Gateway</h3>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleDiagnose}
+                  disabled={isDiagnosing}
+                  className="h-7 text-xs bg-emerald-50 border-emerald-300 hover:bg-emerald-100 text-emerald-800"
+                >
+                  {isDiagnosing ? "Testando..." : "Testar Gateway"}
+                </Button>
+              </div>
+
+              {diagnosis ? (
+                <div className="grid gap-2 text-xs">
+                  <div className="flex items-center justify-between py-1 border-b border-border/40">
+                    <span className="text-muted-foreground">1. Gateway acessível</span>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        diagnosis.gatewayAccessible.ok
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+                          : "border-destructive/30 bg-destructive/10 text-destructive"
+                      }`}
+                    >
+                      {diagnosis.gatewayAccessible.ok ? "✓ " : "✗ "} {diagnosis.gatewayAccessible.message}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between py-1 border-b border-border/40">
+                    <span className="text-muted-foreground">2. Credenciais válidas</span>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        diagnosis.credentialsValid.ok
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+                          : "border-destructive/30 bg-destructive/10 text-destructive"
+                      }`}
+                    >
+                      {diagnosis.credentialsValid.ok ? "✓ " : "✗ "} {diagnosis.credentialsValid.message}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between py-1 border-b border-border/40">
+                    <span className="text-muted-foreground">3. Instância encontrada</span>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        diagnosis.instanceFound.ok
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+                          : "border-destructive/30 bg-destructive/10 text-destructive"
+                      }`}
+                    >
+                      {diagnosis.instanceFound.ok ? "✓ " : "✗ "} {diagnosis.instanceFound.message}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between py-1 border-b border-border/40">
+                    <span className="text-muted-foreground">4. Sessão criada</span>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        diagnosis.sessionCreated.ok
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+                          : "border-destructive/30 bg-destructive/10 text-destructive"
+                      }`}
+                    >
+                      {diagnosis.sessionCreated.ok ? "✓ " : "✗ "} {diagnosis.sessionCreated.message}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between py-1 border-b border-border/40">
+                    <span className="text-muted-foreground">5. QR Code recebido</span>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        diagnosis.qrReceived.ok
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+                          : "border-destructive/30 bg-destructive/10 text-destructive"
+                      }`}
+                    >
+                      {diagnosis.qrReceived.ok ? "✓ " : "✗ "} {diagnosis.qrReceived.message}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between py-1 border-b border-border/40">
+                    <span className="text-muted-foreground">6. WhatsApp conectado</span>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        diagnosis.whatsappConnected.ok
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+                          : "border-destructive/30 bg-destructive/10 text-destructive"
+                      }`}
+                    >
+                      {diagnosis.whatsappConnected.ok ? "✓ " : "✗ "} {diagnosis.whatsappConnected.message}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-muted-foreground">7. Grupos sincronizados</span>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        diagnosis.groupsSynced.ok
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+                          : "border-destructive/30 bg-destructive/10 text-destructive"
+                      }`}
+                    >
+                      {diagnosis.groupsSynced.ok ? "✓ " : "✗ "} {diagnosis.groupsSynced.message}
+                    </Badge>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-muted-foreground italic">Clique no botão "Testar Gateway" para rodar o fluxo completo de diagnóstico real.</p>
+              )}
+            </div>
+          )}
+
+          {/* FORMULÁRIO DE ENVIO DE MENSAGEM DE TESTE */}
+          {isConnected && (
+            <div className="rounded-xl border border-border bg-card p-4 mt-4 space-y-4">
+              <div className="flex items-center gap-2 border-b border-border pb-2">
+                <Smartphone className="size-4 text-emerald-600" />
+                <h3 className="text-xs font-semibold text-foreground">Enviar Mensagem de Teste Real</h3>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="space-y-1">
+                  <Label htmlFor="test-group" className="text-xs font-semibold">
+                    Selecionar Grupo Real Sincronizado <span className="text-destructive">*</span>
+                  </Label>
+                  <select
+                    id="test-group"
+                    value={testGroupId}
+                    onChange={(e) => setTestGroupId(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
+                  >
+                    <option value="" className="text-muted-foreground">-- Selecione um grupo --</option>
+                    {userGroups.map((g: any) => (
+                      <option key={g.id} value={g.id} className="text-foreground">
+                        {g.name} ({g.participant_count} participantes)
+                      </option>
+                    ))}
+                  </select>
+                  {userGroups.length === 0 && (
+                    <p className="text-[10px] text-amber-600 mt-1">Nenhum grupo real importado ainda. Sincronize seus grupos acima.</p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="test-msg" className="text-xs font-semibold">
+                    Mensagem de Teste
+                  </Label>
+                  <Input
+                    id="test-msg"
+                    placeholder="Digite a mensagem"
+                    value={testMessage}
+                    onChange={(e) => setTestMessage(e.target.value)}
+                    className="h-9 text-xs"
+                  />
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <Button
+                    size="sm"
+                    className="bg-primary text-primary-foreground gap-1.5 text-xs"
+                    onClick={handleSendTestMessage}
+                    disabled={isSendingTest || !testGroupId}
+                  >
+                    {isSendingTest ? "Enviando..." : "Enviar mensagem de teste"}
                   </Button>
                 </div>
               </div>

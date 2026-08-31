@@ -276,3 +276,28 @@ export const getWhatsAppMetrics = createServerFn({ method: "GET" })
       failed,
     };
   });
+
+/** 16. Diagnóstico completo do Gateway de WhatsApp */
+export const runWhatsAppDiagnosis = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { diagnoseWhatsAppGateway } = await import("./whatsapp.server");
+    return diagnoseWhatsAppGateway(context.supabase, context.userId);
+  });
+
+/** 17. Envio de mensagem de teste para grupos reais do WhatsApp */
+export const sendWhatsAppTestMessageFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { groupId: string; message: string }) =>
+    z
+      .object({
+        groupId: z.string(),
+        message: z.string().min(1, "Mensagem não pode ser vazia"),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { sendWhatsAppTestMessage } = await import("./whatsapp.server");
+    return sendWhatsAppTestMessage(context.supabase, context.userId, data.groupId, data.message);
+  });
+

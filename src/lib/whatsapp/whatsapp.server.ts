@@ -524,3 +524,155 @@ export async function executeQueueItem(
     return { ok: false, reason: errorReason };
   }
 }
+
+export interface DiagnosisReport {
+  gatewayAccessible: { ok: boolean; message: string };
+  credentialsValid: { ok: boolean; message: string };
+  instanceFound: { ok: boolean; message: string };
+  sessionCreated: { ok: boolean; message: string };
+  qrReceived: { ok: boolean; message: string };
+  whatsappConnected: { ok: boolean; message: string };
+  groupsSynced: { ok: boolean; message: string };
+}
+
+export async function diagnoseWhatsAppGateway(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<DiagnosisReport> {
+  const report: DiagnosisReport = {
+    gatewayAccessible: { ok: false, message: "Pendente" },
+    credentialsValid: { ok: false, message: "Pendente" },
+    instanceFound: { ok: false, message: "Pendente" },
+    sessionCreated: { ok: false, message: "Pendente" },
+    qrReceived: { ok: false, message: "Pendente" },
+    whatsappConnected: { ok: false, message: "Pendente" },
+    groupsSynced: { ok: false, message: "Pendente" },
+  };
+
+  // 1. Busca conexão no banco
+  const { data: conn } = await supabase
+    .from("whatsapp_connections")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!conn || !conn.api_url) {
+    report.gatewayAccessible = { ok: false, message: "URL do gateway não configurada no banco de dados." };
+    return report;
+  }
+
+  const creds = await getEffectiveCredentials(supabase, userId, conn);
+  const baseUrl = (creds.apiUrl || "").trim().replace(/\/+$/, "");
+
+  // 2. Gateway Acessível
+  try {
+    const pingRes = await fetch(baseUrl, { method: "GET" }).catch(() => null);
+    if (!pingRes && !baseUrl.startsWith("http")) {
+      report.gatewayAccessible = { ok: false, message: `URL inválida ou inacessível: ${baseUrl}` };
+      return report;
+    }
+    report.gatewayAccessible = { ok: true, message: `Gateway acessível em ${baseUrl}` };
+  } catch (err: any) {
+    report.gatewayAccessible = { ok: false, message: `Erro ao conectar no Gateway: ${err.message}` };
+    return report;
+  }
+
+  // 3. Credenciais Válidas & Instância Encontrada
+  try {
+    const statusRes = await defaultWhatsAppGatewayProvider.getConnectionStatus(conn.session_identifier, creds);
+    report.credentialsValid = { ok: true, message: "Autenticação aceita pelo gateway" };
+    
+    if (statusRes.status === "connected") {
+      report.instanceFound = { ok: true, message: `Instância "${creds.instanceName}" localizada` };
+      report.sessionCreated = { ok: true, message: "Sessão ativa" };
+      report.qrReceived = { ok: true, message: "Não aplicável (já conectado)" };
+      report.whatsappConnected = { ok: true, message: "WhatsApp pareado com sucesso" };
+    } else {
+      report.instanceFound = { ok: true, message: `Instância "${creds.instanceName}" localizada (aguardando login)` };
+      report.sessionCreated = { ok: true, message: "Sessão aguardando pareamento" };
+      
+      if (conn.qr_code) {
+        report.qrReceived = { ok: true, message: "QR Code real disponível para leitura" };
+      } else {
+        report.qrReceived = { ok: false, message: "Instância criada, mas QR Code ainda não recebido" };
+      }
+      report.whatsappConnected = { ok: false, message: "Aguardando leitura do QR Code" };
+    }
+  } catch (err: any) {
+    report.credentialsValid = { ok: false, message: `Credenciais inválidas ou erro no gateway: ${err.message}` };
+    return report;
+  }
+
+  // 4. Grupos Sincronizados
+  if (report.whatsappConnected.ok) {
+    try {
+      const syncRes = await syncGroupsForUser(supabase, userId, conn.id);
+      report.groupsSynced = { ok: true, message: `${syncRes.total} grupos reais sincronizados (${syncRes.imported} novos)` };
+    } catch (err: any) {
+      report.groupsSynced = { ok: false, message: `Erro ao sincronizar grupos: ${err.message}` };
+    }
+  } else {
+    report.groupsSynced = { ok: false, message: "Sincronização de grupos disponível apenas após conexão" };
+  }
+
+  return report;
+}
+
+export async function sendWhatsAppTestMessage(
+  supabase: SupabaseClient,
+  userId: string,
+  groupId: string,
+  message: string,
+): Promise<{ ok: boolean; error?: string }> {
+  // 1. Busca grupo
+  const { data: group } = await supabase
+    .from("whatsapp_groups")
+    .select("*")
+    .eq("id", groupId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!group) {
+    return { ok: false, error: "Grupo não encontrado." };
+  }
+
+  // 2. Busca conexão
+  const { data: conn } = await supabase
+    .from("whatsapp_connections")
+    .select("*")
+    .eq("id", group.connection_id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!conn || conn.status !== "connected") {
+    return { ok: false, error: "WhatsApp não está conectado para esta instância." };
+  }
+
+  const creds = await getEffectiveCredentials(supabase, userId, conn);
+
+  // 3. Envia mensagem real
+  const sendResult = await defaultWhatsAppGatewayProvider.sendMessage(
+    conn.session_identifier,
+    group.external_group_id,
+    message,
+    creds,
+  );
+
+  // 4. Grava log
+  await supabase.from("whatsapp_logs").insert({
+    user_id: userId,
+    connection_id: conn.id,
+    group_name: group.name,
+    offer_title: `Mensagem de Teste: ${message.slice(0, 30)}`,
+    status: sendResult.ok ? "sent" : "failed",
+    reason: sendResult.ok ? null : (sendResult.error || "Erro no envio"),
+    attempt: 1,
+  });
+
+  if (sendResult.ok) {
+    return { ok: true };
+  } else {
+    return { ok: false, error: sendResult.error || "Erro no envio via gateway" };
+  }
+}
+
