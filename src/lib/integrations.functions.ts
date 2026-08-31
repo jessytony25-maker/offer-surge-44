@@ -23,9 +23,8 @@ const saveSchema = targetSchema.extend({
 export const listIntegrations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const [{ data: creds }, marketplaces, channels] = await Promise.all([
-      supabaseAdmin
+      context.supabase
         .from("integration_credentials")
         .select("kind, provider, credentials")
         .eq("user_id", context.userId),
@@ -68,8 +67,7 @@ export const saveIntegration = createServerFn({ method: "POST" })
     const kind = data.kind as IntegrationKind;
     if (!isValidProvider(kind, data.provider)) throw new Error("Integração desconhecida");
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await context.supabase
       .from("integration_credentials")
       .select("credentials")
       .eq("user_id", context.userId)
@@ -84,7 +82,7 @@ export const saveIntegration = createServerFn({ method: "POST" })
       data.credentials,
     );
 
-    await supabaseAdmin.from("integration_credentials").upsert(
+    await context.supabase.from("integration_credentials").upsert(
       { user_id: context.userId, kind, provider: data.provider, credentials: merged },
       { onConflict: "user_id,kind,provider" },
     );
@@ -126,8 +124,7 @@ export const disconnectIntegration = createServerFn({ method: "POST" })
   .validator((input: unknown) => targetSchema.parse(input))
   .handler(async ({ data, context }) => {
     const kind = data.kind as IntegrationKind;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin
+    await context.supabase
       .from("integration_credentials")
       .delete()
       .eq("user_id", context.userId)
@@ -187,8 +184,6 @@ export const buildAffiliateLinkFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { originalUrl, subId } = data;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     // Identifica o marketplace da URL
     let foundSlug: MarketplaceSlug | null = null;
     for (const [slug, adapter] of Object.entries(MARKETPLACE_ADAPTERS)) {
@@ -203,7 +198,7 @@ export const buildAffiliateLinkFn = createServerFn({ method: "POST" })
     }
 
     const adapter = MARKETPLACE_ADAPTERS[foundSlug];
-    const { data: credRow } = await supabaseAdmin
+    const { data: credRow } = await context.supabase
       .from("integration_credentials")
       .select("credentials")
       .eq("user_id", context.userId)

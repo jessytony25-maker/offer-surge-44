@@ -319,7 +319,7 @@ export async function runAutomation(
   let telegramToken: string | undefined;
   if (groups.some((g) => g.platform === "telegram")) {
     const { getCredentials } = await import("@/lib/credentials.server");
-    const creds = await getCredentials(userId, "channel", "telegram");
+    const creds = await getCredentials(supabase, userId, "channel", "telegram");
     telegramToken = creds["bot_token"];
   }
   const { tgSendMessage } = await import("@/lib/telegram.server");

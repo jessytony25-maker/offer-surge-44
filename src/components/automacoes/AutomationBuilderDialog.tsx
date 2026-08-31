@@ -231,7 +231,7 @@ export function AutomationBuilderDialog({
     }
 
     const rule: AutomationRule = {
-      id: initialRule?.id ?? crypto.randomUUID(),
+      id: initialRule?.id ?? "",
       name: name.trim(),
       enabled: initialRule?.enabled ?? true,
       trigger_type: triggerType,

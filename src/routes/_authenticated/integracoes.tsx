@@ -326,7 +326,7 @@ function Integracoes() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["integrations"],
-    queryFn: () => listIntegrations(),
+    queryFn: () => fetchList(),
     retry: 1,
     throwOnError: false,
   });

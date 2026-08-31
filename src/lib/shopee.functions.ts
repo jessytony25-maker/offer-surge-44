@@ -38,7 +38,7 @@ export const shopeeAnalytics = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<ShopeeAnalytics> => {
     const { getCredentials } = await import("@/lib/credentials.server");
     const { shopeeConversions, toNumber } = await import("@/lib/shopee.server");
-    const creds = await getCredentials(context.userId, "marketplace", "shopee");
+    const creds = await getCredentials(context.supabase, context.userId, "marketplace", "shopee");
     const appId = creds["api_key"];
     const secret = creds["api_secret"];
 
@@ -159,7 +159,7 @@ export const refreshTopSellers = createServerFn({ method: "POST" })
     const { getCredentials } = await import("@/lib/credentials.server");
     const { shopeeTopSellers, toNumber } = await import("@/lib/shopee.server");
     const { computeOfferScore } = await import("@/lib/offer-score");
-    const creds = await getCredentials(context.userId, "marketplace", "shopee");
+    const creds = await getCredentials(context.supabase, context.userId, "marketplace", "shopee");
     const appId = creds["api_key"];
     const secret = creds["api_secret"];
 

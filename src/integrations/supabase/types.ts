@@ -955,6 +955,7 @@ export type Database = {
           marketplace: string
           started_at: string
           status: string
+          updated_at: string
           user_id: string
         }
         Insert: {
@@ -970,6 +971,7 @@ export type Database = {
           marketplace: string
           started_at?: string
           status?: string
+          updated_at?: string
           user_id?: string
         }
         Update: {
@@ -985,6 +987,7 @@ export type Database = {
           marketplace?: string
           started_at?: string
           status?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -1101,11 +1104,15 @@ export type Database = {
       }
       offer_price_history: {
         Row: {
+          available: boolean | null
           captured_at: string
+          coupon: string | null
           discount_pct: number | null
+          free_shipping: boolean | null
           id: string
           marketplace: string
           offer_id: string | null
+          original_price: number | null
           price: number
           product_id: string | null
           promo_price: number | null
@@ -1113,11 +1120,15 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          available?: boolean | null
           captured_at?: string
+          coupon?: string | null
           discount_pct?: number | null
+          free_shipping?: boolean | null
           id?: string
           marketplace: string
           offer_id?: string | null
+          original_price?: number | null
           price: number
           product_id?: string | null
           promo_price?: number | null
@@ -1125,11 +1136,15 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          available?: boolean | null
           captured_at?: string
+          coupon?: string | null
           discount_pct?: number | null
+          free_shipping?: boolean | null
           id?: string
           marketplace?: string
           offer_id?: string | null
+          original_price?: number | null
           price?: number
           product_id?: string | null
           promo_price?: number | null
@@ -1211,6 +1226,7 @@ export type Database = {
       }
       offers: {
         Row: {
+          affiliate_status: string | null
           affiliate_url: string | null
           available: boolean
           category: string | null
@@ -1219,6 +1235,7 @@ export type Database = {
           coupon: string | null
           created_at: string
           discount_pct: number
+          external_product_id: string | null
           fingerprint: string | null
           free_shipping: boolean
           id: string
@@ -1231,15 +1248,19 @@ export type Database = {
           product_id: string | null
           rating: number | null
           rating_count: number | null
+          review_count: number | null
           sales_count: number | null
           score: number
+          source: string | null
           source_id: string | null
           status: Database["public"]["Enums"]["offer_status"]
+          synced_at: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          affiliate_status?: string | null
           affiliate_url?: string | null
           available?: boolean
           category?: string | null
@@ -1248,6 +1269,7 @@ export type Database = {
           coupon?: string | null
           created_at?: string
           discount_pct?: number
+          external_product_id?: string | null
           fingerprint?: string | null
           free_shipping?: boolean
           id?: string
@@ -1260,15 +1282,19 @@ export type Database = {
           product_id?: string | null
           rating?: number | null
           rating_count?: number | null
+          review_count?: number | null
           sales_count?: number | null
           score?: number
+          source?: string | null
           source_id?: string | null
           status?: Database["public"]["Enums"]["offer_status"]
+          synced_at?: string | null
           title: string
           updated_at?: string
           user_id?: string
         }
         Update: {
+          affiliate_status?: string | null
           affiliate_url?: string | null
           available?: boolean
           category?: string | null
@@ -1277,6 +1303,7 @@ export type Database = {
           coupon?: string | null
           created_at?: string
           discount_pct?: number
+          external_product_id?: string | null
           fingerprint?: string | null
           free_shipping?: boolean
           id?: string
@@ -1289,10 +1316,13 @@ export type Database = {
           product_id?: string | null
           rating?: number | null
           rating_count?: number | null
+          review_count?: number | null
           sales_count?: number | null
           score?: number
+          source?: string | null
           source_id?: string | null
           status?: Database["public"]["Enums"]["offer_status"]
+          synced_at?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -1469,6 +1499,7 @@ export type Database = {
           image_url: string | null
           is_demo: boolean
           marketplace: string
+          price: number | null
           rating: number | null
           rating_count: number | null
           sales_count: number | null
@@ -1486,6 +1517,7 @@ export type Database = {
           image_url?: string | null
           is_demo?: boolean
           marketplace: string
+          price?: number | null
           rating?: number | null
           rating_count?: number | null
           sales_count?: number | null
@@ -1503,6 +1535,7 @@ export type Database = {
           image_url?: string | null
           is_demo?: boolean
           marketplace?: string
+          price?: number | null
           rating?: number | null
           rating_count?: number | null
           sales_count?: number | null

@@ -65,8 +65,7 @@ export class MarketplaceSyncEngine {
       logId = logRow?.id;
 
       // 2. Obter credenciais salvas do usuário para esse marketplace
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: credRow } = await supabaseAdmin
+      const { data: credRow } = await supabase
         .from("integration_credentials")
         .select("credentials")
         .eq("user_id", userId)
@@ -196,7 +195,7 @@ export class MarketplaceSyncEngine {
           const isUpdate = Boolean(existingOffer);
 
           // E. Upsert na tabela de ofertas
-          const { data: offerData } = await supabase
+          const { data: offerData, error: offerError } = await supabase
             .from("offers")
             .upsert(
               {
@@ -220,7 +219,7 @@ export class MarketplaceSyncEngine {
                 affiliate_url: finalAffiliateUrl,
                 affiliate_status: affiliateStatus,
                 score: scoreResult.score,
-                status: isUpdate ? "active" : "new",
+                status: isUpdate ? "approved" : "new",
                 source: "sync",
                 synced_at: now,
                 updated_at: now,
@@ -229,6 +228,12 @@ export class MarketplaceSyncEngine {
             )
             .select("id")
             .maybeSingle();
+
+          if (offerError) {
+            result.errorCount++;
+            result.lastError = `Falha ao salvar oferta "${p.title}": ${offerError.message}`;
+            continue;
+          }
 
           if (isUpdate) {
             result.itemsUpdated++;
