@@ -260,10 +260,16 @@ function Automacoes() {
       title="Automações"
       description="Fluxo 100% automático: captura de ofertas, filtros, formatação de copy e publicação no Telegram"
       actions={
-        <Button onClick={handleCreateNew} size="sm" className="gap-2">
-          <Plus className="size-4" />
-          Nova Regra de Automação
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handlePublishAll} size="sm" variant="outline" className="gap-2">
+            <Rocket className="size-4" />
+            Publicar tudo
+          </Button>
+          <Button onClick={handleCreateNew} size="sm" className="gap-2">
+            <Plus className="size-4" />
+            Nova Regra
+          </Button>
+        </div>
       }
     >
       {/* 4 ETAPAS EM DESTAQUE */}
