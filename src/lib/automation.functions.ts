@@ -82,8 +82,7 @@ export const saveAutomation = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     const verify = await context.supabase.from("automations").select("id,name");
-    console.log("[saveAutomation] inserted", inserted, "verify", JSON.stringify(verify.data), verify.error);
-    return { id: inserted?.id ?? "" };
+    return { id: inserted?.id ?? "", debug: JSON.stringify(verify.data ?? verify.error) };
   });
 
 export const toggleAutomation = createServerFn({ method: "POST" })
