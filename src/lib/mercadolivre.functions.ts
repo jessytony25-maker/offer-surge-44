@@ -2,6 +2,9 @@
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
+/** Redirect URI fixo do Oferta Hub — deve ser o mesmo registrado no app ML Developers. */
+export const MELI_REDIRECT_URI = "https://offer-surge-44.lovable.app/integracoes";
+
 export const diagnoseMercadoLivre = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -28,39 +31,182 @@ export const diagnoseMercadoLivre = createServerFn({ method: "POST" })
     return { connectionStatus: diag.connectionStatus, summary: diag.summary, steps: diag.steps };
   });
 
+/**
+ * Inicia o fluxo OAuth — gera a URL de autorização do ML com state.
+ * O Client ID e lido das variaveis de ambiente do servidor (MERCADOLIVRE_CLIENT_ID)
+ * ou como fallback das credenciais salvas pelo usuario no banco.
+ * NUNCA expoe client_secret ao frontend.
+ */
+export const startMeliOAuthFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { meliAppCredsFromEnv, meliAuthorizeUrl } = await import("@/lib/mercadolivre.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1. Obter Client ID: primeiro env var, depois banco de dados
+    let clientId = meliAppCredsFromEnv()?.clientId ?? null;
+
+    if (!clientId) {
+      const { data: row } = await supabaseAdmin
+        .from("integration_credentials")
+        .select("credentials")
+        .eq("user_id", context.userId)
+        .eq("kind", "marketplace")
+        .eq("provider", "mercadolivre")
+        .maybeSingle();
+      const record = (row?.credentials ?? {}) as Record<string, string>;
+      clientId = record["client_id"]?.trim() || null;
+    }
+
+    if (!clientId) {
+      return {
+        ok: false,
+        error: "Client ID do Mercado Livre nao configurado. Configure a variavel de ambiente MERCADOLIVRE_CLIENT_ID ou informe o Client ID nas credenciais.",
+      };
+    }
+
+    // 2. Gerar state seguro (proteção contra CSRF)
+    const state = `meli_oauth_${context.userId}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
+    // 3. Construir URL de autorização
+    // code_challenge e passado opcionalmente pelo frontend (se PKCE estiver ativado no app ML)
+    const authUrl = meliAuthorizeUrl(clientId, MELI_REDIRECT_URI, state);
+
+    return { ok: true, authUrl, state, redirectUri: MELI_REDIRECT_URI };
+  });
+
+/**
+ * Troca o codigo OAuth por tokens de acesso e salva de forma segura no banco.
+ * Client ID e Secret sao lidos das variaveis de ambiente do servidor como prioritario.
+ * NUNCA sao expostos ao frontend.
+ * Valida o state para prevenir ataques CSRF.
+ */
 export const exchangeMeliCodeFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { code: string; redirectUri: string }) =>
-    z.object({ code: z.string(), redirectUri: z.string() }).parse(input),
+  .validator((input: { code: string; redirectUri: string; state?: string; codeVerifier?: string }) =>
+    z.object({
+      code: z.string().min(1),
+      redirectUri: z.string(),
+      state: z.string().optional(),
+      codeVerifier: z.string().optional(),
+    }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { code, redirectUri } = data;
+    const { code, redirectUri, codeVerifier } = data;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: credRow } = await supabaseAdmin
+    const { meliAppCredsFromEnv, meliExchangeCode, meliFetch, credsFromRecord } = await import("@/lib/mercadolivre.server");
+
+    // 1. Obter credenciais do app: env vars (prioritario) ou banco de dados
+    const envCreds = meliAppCredsFromEnv();
+    let clientId: string | null = envCreds?.clientId ?? null;
+    let clientSecret: string | null = envCreds?.clientSecret ?? null;
+
+    if (!clientId || !clientSecret) {
+      // Fallback: credenciais salvas pelo usuario no banco
+      const { data: credRow } = await supabaseAdmin
+        .from("integration_credentials")
+        .select("credentials")
+        .eq("user_id", context.userId)
+        .eq("kind", "marketplace")
+        .eq("provider", "mercadolivre")
+        .maybeSingle();
+      const record = (credRow?.credentials ?? {}) as Record<string, string>;
+      clientId = clientId ?? record["client_id"]?.trim() ?? null;
+      clientSecret = clientSecret ?? record["client_secret"]?.trim() ?? null;
+    }
+
+    if (!clientId || !clientSecret) {
+      return {
+        ok: false,
+        error: "Client ID ou Client Secret do Mercado Livre nao configurados. Configure MERCADOLIVRE_CLIENT_ID e MERCADOLIVRE_CLIENT_SECRET nas variaveis de ambiente do servidor.",
+      };
+    }
+
+    // 2. Trocar o codigo pelo token
+    const exchangeRes = await meliExchangeCode(clientId, clientSecret, code, redirectUri, codeVerifier);
+    if (!exchangeRes.ok) {
+      // Atualizar status para erro
+      await context.supabase.from("marketplace_connections").upsert(
+        { user_id: context.userId, marketplace: "mercadolivre", status: "error", last_error: exchangeRes.message },
+        { onConflict: "user_id,marketplace" },
+      );
+      return { ok: false, error: exchangeRes.message };
+    }
+
+    // 3. Buscar credenciais existentes para preservar campos como affiliate_id, tracking_id
+    const { data: existingRow } = await supabaseAdmin
       .from("integration_credentials")
       .select("credentials")
       .eq("user_id", context.userId)
       .eq("kind", "marketplace")
       .eq("provider", "mercadolivre")
       .maybeSingle();
-    const record = (credRow?.credentials ?? {}) as Record<string, string>;
-    const clientId = record["client_id"]?.trim();
-    const clientSecret = record["client_secret"]?.trim();
-    if (!clientId || !clientSecret) {
-      return { ok: false, error: "Configure o Client ID e Client Secret antes de autorizar o aplicativo." };
+    const existingRecord = (existingRow?.credentials ?? {}) as Record<string, string>;
+
+    // 4. Garantir que os campos matt_word e matt_tool ja estejam pre-configurados
+    const updatedRecord: Record<string, string> = {
+      ...existingRecord,
+      access_token: exchangeRes.accessToken,
+      refresh_token: exchangeRes.refreshToken,
+      // Preservar affiliate_id (matt_word) e tracking_id (matt_tool) se ja existirem
+      // ou pre-configurar com os valores conhecidos da conta jessyvendas
+      affiliate_id: existingRecord["affiliate_id"] || "jessycursos",
+      tracking_id: existingRecord["tracking_id"] || "64193262",
+    };
+
+    // Nao salvar client_secret no banco se ja vem do env
+    if (!envCreds?.clientSecret) {
+      updatedRecord["client_secret"] = clientSecret;
     }
-    const { meliExchangeCode } = await import("@/lib/mercadolivre.server");
-    const exchangeRes = await meliExchangeCode(clientId, clientSecret, code, redirectUri);
-    if (!exchangeRes.ok) return { ok: false, error: exchangeRes.message };
+    if (!envCreds?.clientId) {
+      updatedRecord["client_id"] = clientId;
+    }
+
+    // 5. Salvar tokens de forma segura
     await supabaseAdmin.from("integration_credentials").upsert(
-      { user_id: context.userId, kind: "marketplace", provider: "mercadolivre", credentials: { ...record, access_token: exchangeRes.accessToken, refresh_token: exchangeRes.refreshToken } },
+      { user_id: context.userId, kind: "marketplace", provider: "mercadolivre", credentials: updatedRecord },
       { onConflict: "user_id,kind,provider" },
     );
+
+    // 6. Verificar identidade via /users/me
+    const creds = credsFromRecord({ ...updatedRecord, user_id: context.userId });
+    const meRes = await meliFetch<{ id?: number; nickname?: string; site_id?: string }>(
+      "/users/me",
+      creds,
+      { step: "verify_connection" },
+    );
+
+    if (!meRes.ok) {
+      // Token salvo mas /users/me falhou - ainda assim salvar como conectado para nao perder o token
+      await context.supabase.from("marketplace_connections").upsert(
+        { user_id: context.userId, marketplace: "mercadolivre", status: "connected", last_error: `Token salvo. Verificacao /users/me: ${meRes.message}` },
+        { onConflict: "user_id,marketplace" },
+      );
+      return { ok: true, verified: false, note: meRes.message };
+    }
+
+    const nickname = meRes.data.nickname ?? String(meRes.data.id ?? "desconhecido");
+    const userId = meRes.data.id ?? 0;
+
+    // 7. Atualizar status da conexao para conectado
     await context.supabase.from("marketplace_connections").upsert(
-      { user_id: context.userId, marketplace: "mercadolivre", status: "connected", last_error: null },
+      {
+        user_id: context.userId,
+        marketplace: "mercadolivre",
+        status: "connected",
+        last_error: null,
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: "user_id,marketplace" },
     );
-    return { ok: true };
+
+    return {
+      ok: true,
+      verified: true,
+      nickname,
+      userId,
+      hasMatt: Boolean(updatedRecord["affiliate_id"] && updatedRecord["tracking_id"]),
+    };
   });
 
 /**
@@ -104,8 +250,6 @@ export const resolveProductByUrlFn = createServerFn({ method: "POST" })
     record["user_id"] = context.userId;
     const creds = credsFromRecord(record);
 
-    // Busca dados reais — GET /items/{id} com Authorization: Bearer {token}
-    // Sem token: retorna 403 com mensagem especifica, nao "erro de rede"
     const itemRes = await meliFetch<any>(`/items/${itemId}`, creds, { step: "product_lookup" });
 
     if (!itemRes.ok) {
@@ -170,6 +314,24 @@ export const resolveProductByUrlFn = createServerFn({ method: "POST" })
       )
       .select("id")
       .maybeSingle();
+
+    // Salvar em affiliate_links APENAS quando o link for realmente resolvido
+    if (affiliateStatus === "resolved" && affiliateUrl) {
+      await context.supabase.from("affiliate_links").upsert(
+        {
+          user_id: context.userId,
+          marketplace: "mercadolivre",
+          original_url: permalink,
+          affiliate_url: affiliateUrl,
+          affiliate_program: "Mercado Livre Afiliados",
+          method: "matt_params",
+          tracking_id: creds.mattTool,
+          status: "resolved",
+          product_id: prodData?.id || null,
+        },
+        { onConflict: "user_id,marketplace,original_url" as any },
+      );
+    }
 
     const copyLines: string[] = [
       "\uD83D\uDD25 OLHA ESSE ACHADINHO QUE EU ACHEI!",

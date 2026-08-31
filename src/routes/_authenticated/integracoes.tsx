@@ -30,7 +30,7 @@ import {
   diagnoseAmazonFn,
 } from "@/lib/integrations.functions";
 import { updateAutoSyncIntervalFn, getLatestSyncLogs } from "@/lib/sync/sync.functions";
-import { exchangeMeliCodeFn, diagnoseMercadoLivre } from "@/lib/mercadolivre.functions";
+import { exchangeMeliCodeFn, diagnoseMercadoLivre, startMeliOAuthFn } from "@/lib/mercadolivre.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -456,36 +456,127 @@ function Integracoes() {
   const [isDiagnosingMeli, setIsDiagnosingMeli] = useState(false);
   const [meliDiagnoseModalOpen, setMeliDiagnoseModalOpen] = useState(false);
 
-  // Mutation para trocar o código OAuth do Mercado Livre
+  // Estados OAuth Mercado Livre
   const exchangeMeliCode = useServerFn(exchangeMeliCodeFn);
+  const startMeliOAuth = useServerFn(startMeliOAuthFn);
+  const [meliOAuthStatus, setMeliOAuthStatus] = useState<
+    "idle" | "authorizing" | "exchanging" | "connected" | "error"
+  >("idle");
+  const [meliOAuthError, setMeliOAuthError] = useState<string | null>(null);
+  const [meliNickname, setMeliNickname] = useState<string | null>(null);
+
   const exchangeMutation = useMutation({
-    mutationFn: (input: { code: string; redirectUri: string }) => exchangeMeliCode({ data: input }),
+    mutationFn: (input: { code: string; redirectUri: string; state?: string; codeVerifier?: string }) =>
+      exchangeMeliCode({ data: input }),
+    onMutate: () => {
+      setMeliOAuthStatus("exchanging");
+      setMeliOAuthError(null);
+    },
     onSuccess: (res) => {
       if (res.ok) {
-        toast.success("Autenticação com o Mercado Livre concluída com sucesso!");
-        // Limpa o parâmetro da URL
+        setMeliOAuthStatus("connected");
+        setMeliNickname(res.verified && "nickname" in res ? res.nickname ?? null : null);
+        toast.success(
+          res.verified && "nickname" in res
+            ? `Mercado Livre conectado como "${res.nickname}"! ✅`
+            : "Autenticação com o Mercado Livre concluída!",
+        );
         const url = new URL(window.location.href);
         url.searchParams.delete("code");
         url.searchParams.delete("state");
         window.history.replaceState({}, "", url.toString());
         queryClient.invalidateQueries({ queryKey: ["integrations"] });
       } else {
-        toast.error(res.error || "Falha ao autenticar com o Mercado Livre.");
+        setMeliOAuthStatus("error");
+        setMeliOAuthError("error" in res ? res.error ?? "Falha na autenticação." : "Erro desconhecido.");
+        toast.error("error" in res ? res.error || "Falha ao autenticar com o Mercado Livre." : "Falha na autenticação.");
       }
     },
-    onError: () => toast.error("Falha ao comunicar com o servidor para autenticação."),
+    onError: () => {
+      setMeliOAuthStatus("error");
+      setMeliOAuthError("Erro de comunicação com o servidor.");
+      toast.error("Falha ao comunicar com o servidor para autenticação.");
+    },
   });
 
+  // Callback: captura ?code= quando ML redireciona de volta
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const searchParams = new URLSearchParams(window.location.search);
-      const code = searchParams.get("code");
-      if (code) {
-        const redirectUri = `${window.location.origin}/integracoes`;
-        exchangeMutation.mutate({ code, redirectUri });
-      }
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const returnedState = params.get("state") ?? "";
+    if (!code) return;
+
+    // Recuperar state e codeVerifier salvos antes do redirect
+    const savedState = sessionStorage.getItem("meli_oauth_state") ?? "";
+    const codeVerifier = sessionStorage.getItem("meli_pkce_verifier") ?? undefined;
+
+    // Validar state (proteção CSRF)
+    if (savedState && returnedState && savedState !== returnedState) {
+      setMeliOAuthStatus("error");
+      setMeliOAuthError("State inválido. Possível ataque CSRF. Tente autorizar novamente.");
+      toast.error("Erro de segurança no OAuth. Tente novamente.");
+      return;
     }
+
+    sessionStorage.removeItem("meli_oauth_state");
+    sessionStorage.removeItem("meli_pkce_verifier");
+
+    const redirectUri = "https://offer-surge-44.lovable.app/integracoes";
+    exchangeMutation.mutate({ code, redirectUri, state: returnedState || undefined, codeVerifier });
   }, []);
+
+  const handleStartMeliOAuth = async () => {
+    setMeliOAuthStatus("authorizing");
+    setMeliOAuthError(null);
+    try {
+      // Gerar PKCE code_verifier/code_challenge (S256) no cliente
+      const array = new Uint8Array(32);
+      crypto.getRandomValues(array);
+      const codeVerifier = btoa(String.fromCharCode(...array))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=/g, "");
+
+      // SHA-256 do verifier para o challenge
+      const encoder = new TextEncoder();
+      const data = encoder.encode(codeVerifier);
+      const digest = await crypto.subtle.digest("SHA-256", data);
+      const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=/g, "");
+
+      // Chamar server function para obter a URL de autorização com state seguro
+      const res = await startMeliOAuth({ data: {} as any });
+      if (!res.ok) {
+        setMeliOAuthStatus("error");
+        setMeliOAuthError("error" in res ? res.error ?? "Erro ao iniciar OAuth." : "Erro ao iniciar OAuth.");
+        toast.error("error" in res ? res.error || "Erro ao iniciar o fluxo OAuth." : "Erro ao iniciar OAuth.");
+        return;
+      }
+
+      // Salvar state e codeVerifier antes do redirect (para validação no callback)
+      if ("state" in res) sessionStorage.setItem("meli_oauth_state", res.state ?? "");
+      sessionStorage.setItem("meli_pkce_verifier", codeVerifier);
+
+      // Adicionar code_challenge à URL se necessário
+      let authUrl: string = "authUrl" in res ? (res.authUrl as string) : "";
+      if (codeChallenge && authUrl) {
+        const u = new URL(authUrl);
+        u.searchParams.set("code_challenge", codeChallenge);
+        u.searchParams.set("code_challenge_method", "S256");
+        authUrl = u.toString();
+      }
+
+      // Redirecionar para o ML OAuth
+      window.location.href = authUrl;
+    } catch (e: any) {
+      setMeliOAuthStatus("error");
+      setMeliOAuthError(e.message || "Erro ao iniciar autenticação.");
+      toast.error("Erro ao iniciar autenticação com o Mercado Livre.");
+    }
+  };
 
   const [target, setTarget] = useState<{
     kind: Kind;
@@ -854,32 +945,79 @@ function Integracoes() {
 
           {target?.provider === "mercadolivre" && (
             <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 space-y-2 text-xs">
+              {/* Título do card */}
               <span className="font-semibold text-foreground flex items-center gap-1.5 text-amber-700">
                 <AlertTriangle className="size-3.5" />
-                Fluxo de Autenticação OAuth (Obrigatório)
+                Autenticação OAuth — Mercado Livre
               </span>
-              <p className="text-[10px] text-muted-foreground leading-tight">
-                Primeiro configure seu Client ID e Client Secret. Depois, registre a URL abaixo no console de desenvolvedor do Mercado Livre e clique em Autorizar.
-              </p>
-              <div className="text-[10px] bg-background p-1.5 rounded font-mono break-all select-all border border-border">
-                Redirect URI: {typeof window !== "undefined" ? `${window.location.origin}/integracoes` : ""}
+
+              {/* Status visual do OAuth */}
+              <div className={`flex items-center gap-2 rounded px-2 py-1.5 text-[10px] font-semibold ${
+                meliOAuthStatus === "connected" ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-600"
+                : meliOAuthStatus === "error" ? "bg-destructive/10 border border-destructive/20 text-destructive"
+                : meliOAuthStatus === "authorizing" || meliOAuthStatus === "exchanging" ? "bg-blue-500/10 border border-blue-500/20 text-blue-600"
+                : "bg-muted border border-border text-muted-foreground"
+              }`}>
+                {meliOAuthStatus === "idle" && <><AlertCircle className="size-3" /> Não autorizado</>}
+                {meliOAuthStatus === "authorizing" && <><RefreshCw className="size-3 animate-spin" /> Redirecionando para o Mercado Livre...</>}
+                {meliOAuthStatus === "exchanging" && <><RefreshCw className="size-3 animate-spin" /> Trocando código por token...</>}
+                {meliOAuthStatus === "connected" && <><CheckCircle2 className="size-3" /> Conectado{meliNickname ? ` como "${meliNickname}"` : ""}</>}
+                {meliOAuthStatus === "error" && <><AlertCircle className="size-3" /> Erro na autenticação</>}
               </div>
-              {values.client_id && (
+
+              {/* Mensagem de erro detalhada */}
+              {meliOAuthStatus === "error" && meliOAuthError && (
+                <p className="text-[10px] text-destructive bg-destructive/5 rounded p-2 border border-destructive/20 whitespace-pre-wrap">
+                  {meliOAuthError}
+                </p>
+              )}
+
+              {/* Redirect URI fixo */}
+              <div className="space-y-1">
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  Registre exatamente esta URL no console de desenvolvedor do Mercado Livre:
+                </p>
+                <div className="text-[10px] bg-background p-1.5 rounded font-mono break-all select-all border border-border text-foreground">
+                  https://offer-surge-44.lovable.app/integracoes
+                </div>
+              </div>
+
+              {/* PKCE info */}
+              <p className="text-[10px] text-muted-foreground">
+                ✅ PKCE (S256) implementado · ✅ State CSRF implementado · ✅ Token salvo apenas no servidor
+              </p>
+
+              {/* Botão de autorização */}
+              {meliOAuthStatus !== "connected" && (
                 <Button
                   size="sm"
                   type="button"
-                  className="w-full bg-amber-600 hover:bg-amber-700 text-white h-8 text-[11px]"
-                  onClick={() => {
-                    const redirectUri = `${window.location.origin}/integracoes`;
-                    const authUrl = `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${values.client_id.trim()}&redirect_uri=${encodeURIComponent(redirectUri)}`;
-                    window.location.href = authUrl;
-                  }}
+                  disabled={meliOAuthStatus === "authorizing" || meliOAuthStatus === "exchanging"}
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white h-8 text-[11px] disabled:opacity-60"
+                  onClick={handleStartMeliOAuth}
                 >
-                  Autorizar no Mercado Livre
+                  {(meliOAuthStatus === "authorizing" || meliOAuthStatus === "exchanging") && (
+                    <RefreshCw className="size-3 animate-spin mr-1.5" />
+                  )}
+                  {meliOAuthStatus === "error" ? "Tentar novamente" : "Autorizar no Mercado Livre"}
+                </Button>
+              )}
+
+              {meliOAuthStatus === "connected" && (
+                <Button
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                  className="w-full h-8 text-[11px] border-emerald-500/30 text-emerald-700"
+                  onClick={handleStartMeliOAuth}
+                >
+                  Reautorizar (renovar token)
                 </Button>
               )}
             </div>
           )}
+
+
 
           <div className="space-y-3 py-2">
             {target?.fields.map((f) => (

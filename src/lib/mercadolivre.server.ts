@@ -124,19 +124,25 @@ export async function meliExchangeCode(
   clientSecret: string,
   code: string,
   redirectUri: string,
-): Promise<{ ok: true; accessToken: string; refreshToken: string } | MeliError> {
+  codeVerifier?: string,
+): Promise<{ ok: true; accessToken: string; refreshToken: string; expiresIn?: number } | MeliError> {
   const endpoint = `${MELI_API}/oauth/token`;
   try {
+    const params: Record<string, string> = {
+      grant_type: "authorization_code",
+      client_id: clientId,
+      client_secret: clientSecret,
+      code,
+      redirect_uri: redirectUri,
+    };
+    // PKCE: se o app tiver code_verifier configurado, inclui no exchange
+    if (codeVerifier) {
+      params["code_verifier"] = codeVerifier;
+    }
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        client_id: clientId,
-        client_secret: clientSecret,
-        code,
-        redirect_uri: redirectUri,
-      }).toString(),
+      body: new URLSearchParams(params).toString(),
     });
     const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     if (!res.ok) {
@@ -154,6 +160,7 @@ export async function meliExchangeCode(
       ok: true,
       accessToken: String(json["access_token"] ?? ""),
       refreshToken: String(json["refresh_token"] ?? ""),
+      expiresIn: Number(json["expires_in"] ?? 21600),
     };
   } catch (err: any) {
     return {
@@ -167,15 +174,42 @@ export async function meliExchangeCode(
   }
 }
 
-/** URL de autorização OAuth (o usuário aprova o app e volta com ?code=). */
-export function meliAuthorizeUrl(clientId: string, redirectUri: string, state: string) {
+/**
+ * Lê as credenciais do app ML das variáveis de ambiente do servidor.
+ * Nunca expostas ao frontend. Usadas como fallback quando o usuário ainda
+ * não as configurou no banco (ou como alternativa mais segura).
+ * Defina no painel do Lovable Cloud (Settings → Environment Variables):
+ *   MERCADOLIVRE_CLIENT_ID
+ *   MERCADOLIVRE_CLIENT_SECRET
+ */
+export function meliAppCredsFromEnv(): { clientId: string; clientSecret: string } | null {
+  const clientId = process.env["MERCADOLIVRE_CLIENT_ID"]?.trim();
+  const clientSecret = process.env["MERCADOLIVRE_CLIENT_SECRET"]?.trim();
+  if (!clientId || !clientSecret) return null;
+  return { clientId, clientSecret };
+}
+
+/** URL de autorização OAuth com state obrigatório. Suporta PKCE (code_challenge). */
+export function meliAuthorizeUrl(
+  clientId: string,
+  redirectUri: string,
+  state: string,
+  codeChallenge?: string,
+) {
   const url = new URL(MELI_AUTH);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("state", state);
+  // PKCE: se o app tiver PKCE ativado no painel ML Developers
+  if (codeChallenge) {
+    url.searchParams.set("code_challenge", codeChallenge);
+    url.searchParams.set("code_challenge_method", "S256");
+  }
   return url.toString();
 }
+
+
 
 export interface MeliFetchOptions {
   step: string;
