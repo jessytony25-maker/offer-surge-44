@@ -1,4 +1,4 @@
-﻿import { createServerFn } from "@tanstack/react-start";
+import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
@@ -223,20 +223,24 @@ export const resolveProductByUrlFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { url } = data;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { credsFromRecord, extractMeliId, meliFetch, applyMattParams, validateAffiliateUrl } =
-      await import("@/lib/mercadolivre.server");
+
 
     if (!/(mercadolivre|mercadolibre)\.[a-z.]+/i.test(url)) {
       return { ok: false as const, error: "A URL nao pertence ao Mercado Livre." };
     }
 
-    const itemId = extractMeliId(url);
-    if (!itemId) {
+    const { credsFromRecord, extractMeliIdFromUrl, meliFetch, applyMattParams, validateAffiliateUrl } =
+      await import("@/lib/mercadolivre.server");
+
+    const parsed = extractMeliIdFromUrl(url);
+    if (!parsed) {
       return {
         ok: false as const,
-        error: `Nao foi possivel extrair o ID MLB da URL: ${url}\n\nFormatos aceitos:\n- https://produto.mercadolivre.com.br/MLB-XXXXXXXX-titulo-do-produto\n- https://www.mercadolivre.com.br/p/MLB12345678`,
+        error: `Nao foi possivel extrair o ID MLB da URL: ${url}\n\nFormatos aceitos:\n- https://produto.mercadolivre.com.br/MLB-XXXXXXXX-titulo (anuncio direto)\n- https://www.mercadolivre.com.br/p/MLB12345678 (catalogo)\n- https://www.mercadolivre.com.br/p/MLB12345678?item_id=MLBXXXXXXXX (catalogo com anuncio especifico)`,
       };
     }
+
+    const { id: resolvedId, type: idType } = parsed;
 
     const { data: credRow } = await supabaseAdmin
       .from("integration_credentials")
@@ -250,19 +254,65 @@ export const resolveProductByUrlFn = createServerFn({ method: "POST" })
     record["user_id"] = context.userId;
     const creds = credsFromRecord(record);
 
-    const itemRes = await meliFetch<any>(`/items/${itemId}`, creds, { step: "product_lookup" });
+    // ---------------------------------------------------------------
+    // BUSCA DO PRODUTO — estratégia depende do tipo de ID
+    // ---------------------------------------------------------------
+    let item: any = null;
+    let usedEndpoint = "";
+    let usedItemId = resolvedId;
 
-    if (!itemRes.ok) {
-      return {
-        ok: false as const,
-        error: itemRes.message,
-        httpStatus: itemRes.httpStatus,
-        endpoint: itemRes.endpoint,
-        step: itemRes.step,
-      };
+    if (idType === "listing") {
+      // Anúncio direto: GET /items/{id}
+      usedEndpoint = `/items/${resolvedId}`;
+      const itemRes = await meliFetch<any>(usedEndpoint, creds, { step: "product_lookup" });
+      if (!itemRes.ok) {
+        return {
+          ok: false as const,
+          error: itemRes.message,
+          httpStatus: itemRes.httpStatus,
+          endpoint: itemRes.endpoint,
+          step: itemRes.step,
+        };
+      }
+      item = itemRes.data;
+
+    } else {
+      // Produto de catálogo: buscar via catalog_product_id → pega melhor oferta
+      // Endpoint: /sites/MLB/search?catalog_product_id=MLB...
+      usedEndpoint = `/sites/MLB/search?catalog_product_id=${resolvedId}&limit=5`;
+      const searchRes = await meliFetch<{ results?: any[] }>(usedEndpoint, creds, { step: "catalog_lookup" });
+
+      if (!searchRes.ok) {
+        return {
+          ok: false as const,
+          error: searchRes.message,
+          httpStatus: searchRes.httpStatus,
+          endpoint: searchRes.endpoint,
+          step: searchRes.step,
+        };
+      }
+
+      const results = searchRes.data.results ?? [];
+      if (results.length === 0) {
+        return {
+          ok: false as const,
+          error: `Nenhum anuncio encontrado para o produto de catalogo ${resolvedId}. Verifique se o produto esta disponivel no Mercado Livre Brasil.`,
+          httpStatus: 200,
+          endpoint: usedEndpoint,
+          step: "catalog_lookup",
+        };
+      }
+
+      // Pega o melhor resultado: prioriza condition=new + maior sold_quantity
+      item = results.sort((a: any, b: any) => {
+        if (a.condition === "new" && b.condition !== "new") return -1;
+        if (b.condition === "new" && a.condition !== "new") return 1;
+        return (b.sold_quantity ?? 0) - (a.sold_quantity ?? 0);
+      })[0];
+      usedItemId = String(item.id ?? resolvedId);
     }
 
-    const item = itemRes.data;
+
     const permalink = item.permalink || url;
 
     let affiliateUrl: string | null = null;
@@ -297,10 +347,23 @@ export const resolveProductByUrlFn = createServerFn({ method: "POST" })
     const salesCount = typeof item.sold_quantity === "number" ? item.sold_quantity : null;
     const now = new Date().toISOString();
 
+    // Comissão estimada do ML Afiliados (3–12% dependendo da categoria)
+    // Referência: https://afiliados.mercadolivre.com.br/comissoes
+    const categoryId: string = item.category_id || "";
+    const commissionPct = (() => {
+      if (/MLB1648[0-9]|MLB5726[0-9]/i.test(categoryId)) return 12; // Moda
+      if (/MLB1276[0-9]/i.test(categoryId)) return 10; // Beleza
+      if (/MLB1574[0-9]/i.test(categoryId)) return 8;  // Casa
+      if (/MLB1051[0-9]/i.test(categoryId)) return 6;  // Eletronicos
+      if (/MLB1144[0-9]/i.test(categoryId)) return 5;  // Informatica
+      return 4; // default conservador
+    })();
+    const commissionValue = price > 0 ? +(price * (commissionPct / 100)).toFixed(2) : null;
+
     const { data: prodData } = await context.supabase
       .from("products")
       .upsert(
-        { user_id: context.userId, marketplace: "mercadolivre", external_id: itemId, title, image_url: imageUrl, url: permalink, price, rating, sales_count: salesCount, updated_at: now },
+        { user_id: context.userId, marketplace: "mercadolivre", external_id: usedItemId, title, image_url: imageUrl, url: permalink, price, rating, sales_count: salesCount, updated_at: now },
         { onConflict: "user_id,marketplace,external_id" as any },
       )
       .select("id")
@@ -354,7 +417,9 @@ export const resolveProductByUrlFn = createServerFn({ method: "POST" })
       ok: true as const,
       product: {
         id: offerData?.id || null,
-        externalId: itemId,
+        externalId: usedItemId,
+        catalogId: idType === "catalog" ? resolvedId : null,
+        idType,
         title,
         imageUrl,
         price,
@@ -367,11 +432,14 @@ export const resolveProductByUrlFn = createServerFn({ method: "POST" })
         affiliateStatus,
         affiliateNote,
         freeShipping: item.shipping?.free_shipping ?? false,
-        category: item.category_id || null,
+        category: categoryId || null,
+        commissionPct,
+        commissionValue,
       },
       copy: copyLines.join("\n"),
     };
   });
+
 
 /**
  * Busca produtos no catalogo do Mercado Livre por keyword.

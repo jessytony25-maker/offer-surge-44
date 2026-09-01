@@ -404,24 +404,62 @@ export async function meliTestAuth(
 }
 
 /**
- * Extrai o ID MLB de uma URL do Mercado Livre.
- * Aceita formatos:
- *   https://produto.mercadolivre.com.br/MLB-3200002050-...
- *   https://www.mercadolivre.com.br/p/MLB12345678
- *   https://produto.mercadolivre.com.br/MLB1234567890
+ * Extrai o ID MLB de uma URL do Mercado Livre com prioridade correta:
+ *
+ * 1. Query param `item_id=MLBXXXXXX` → anúncio direto (type: "listing")
+ * 2. Query param `wid=MLBXXXXXX`     → anúncio direto (type: "listing")
+ * 3. Path `/MLB-XXXXXXXX-titulo`     → anúncio direto (type: "listing")
+ * 4. Path `/MLB12345678`             → anúncio direto (type: "listing")
+ * 5. Path `/p/MLB12345678`           → produto de catálogo (type: "catalog")
+ *    sem item_id/wid → usa endpoint de catálogo
+ *
+ * Retorna null se a URL não for reconhecida ou não pertencer ao ML.
  */
-export function extractMeliId(url: string): string | null {
+export function extractMeliIdFromUrl(
+  url: string,
+): { id: string; type: "listing" | "catalog" } | null {
   try {
     const u = new URL(url);
     if (!/(mercadolivre|mercadolibre)\.[a-z.]+$/i.test(u.hostname)) return null;
-    // Tenta path: /MLB-XXXXXXXX-... ou /MLBXXXXXXXX
-    const pathMatch = u.pathname.match(/\/(MLB[-]?\d+)/i);
-    if (pathMatch) return pathMatch[1].replace("-", "");
+
+    // 1. item_id na query string → anúncio específico (prioridade máxima)
+    const itemIdParam = u.searchParams.get("item_id");
+    if (itemIdParam && /^MLB\d+$/i.test(itemIdParam.trim())) {
+      return { id: itemIdParam.trim().toUpperCase(), type: "listing" };
+    }
+
+    // 2. wid na query string → anúncio específico
+    const widParam = u.searchParams.get("wid");
+    if (widParam && /^MLB\d+$/i.test(widParam.trim())) {
+      return { id: widParam.trim().toUpperCase(), type: "listing" };
+    }
+
+    // 3. Path: /p/MLB... → catálogo (sem item_id/wid acima)
+    const catalogMatch = u.pathname.match(/\/p\/(MLB\d+)/i);
+    if (catalogMatch) {
+      return { id: catalogMatch[1].toUpperCase(), type: "catalog" };
+    }
+
+    // 4. Path: /MLB-XXXXXXXX-titulo ou /MLBxxxxxxxxxx (anúncio direto)
+    const listingMatch = u.pathname.match(/\/(MLB[-]?\d+)/i);
+    if (listingMatch) {
+      const id = listingMatch[1].replace("-", "").toUpperCase();
+      return { id, type: "listing" };
+    }
+
     return null;
   } catch {
     return null;
   }
 }
+
+/** Compatibilidade com código anterior que chama extractMeliId(url): string | null */
+export function extractMeliId(url: string): string | null {
+  return extractMeliIdFromUrl(url)?.id ?? null;
+}
+
+
+
 
 
 

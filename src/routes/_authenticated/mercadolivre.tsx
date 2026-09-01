@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -14,6 +14,8 @@ import {
   Package,
   AlertTriangle,
   RefreshCw,
+  TrendingUp,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
@@ -36,6 +38,8 @@ export const Route = createFileRoute("/_authenticated/mercadolivre")({
 type ProductResult = {
   id: string | null;
   externalId: string;
+  catalogId: string | null;
+  idType: "listing" | "catalog";
   title: string;
   imageUrl: string | null;
   price: number;
@@ -49,6 +53,8 @@ type ProductResult = {
   affiliateNote: string;
   freeShipping: boolean;
   category: string | null;
+  commissionPct: number;
+  commissionValue: number | null;
 };
 
 function MercadoLivrePage() {
@@ -236,10 +242,41 @@ function MercadoLivrePage() {
                       {product.salesCount.toLocaleString("pt-BR")} vendidos
                     </span>
                   )}
-                  {product.freeShipping && (
+                {product.freeShipping && (
                     <span className="text-emerald-600 font-medium">Frete gratis</span>
                   )}
                 </div>
+
+                {/* Badge de Catálogo */}
+                {product.idType === "catalog" && (
+                  <div className="flex items-center gap-1.5 text-[10px] text-blue-600 bg-blue-500/10 border border-blue-500/20 rounded px-2 py-1 w-fit">
+                    <Layers className="size-3" />
+                    Produto de catálogo · melhor oferta selecionada
+                    {product.catalogId && <span className="font-mono opacity-60">({product.catalogId})</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Comissão Estimada */}
+            <div className="border-t border-border px-4 py-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <TrendingUp className="size-3.5 text-emerald-600" />
+                  Comissão Estimada — ML Afiliados
+                </span>
+                <span className="text-xs text-muted-foreground">estimativa</span>
+              </div>
+              <div className="mt-2 flex items-center gap-3 flex-wrap">
+                <span className="text-lg font-bold text-emerald-600">
+                  {product.commissionValue !== null
+                    ? `R$ ${product.commissionValue.toFixed(2).replace(".", ",")}`
+                    : "—"}
+                </span>
+                <Badge className="bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 text-[11px]">
+                  {product.commissionPct}% de comissão
+                </Badge>
+                <span className="text-[10px] text-muted-foreground">por venda gerada via seu link</span>
               </div>
             </div>
 
