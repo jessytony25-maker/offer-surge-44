@@ -56,19 +56,14 @@
       "src_integrations_lovable_index_lovable",
       "src_integrations_lovable_index_lovableauth",
       "src_integrations_lovable_index_signinoptions",
-      "src_integrations_supabase_auth_attacher",
-      "src_integrations_supabase_auth_attacher_attachsupabaseauth",
-      "src_integrations_supabase_client",
-      "src_integrations_supabase_client_createsupabaseclient",
-      "src_integrations_supabase_client_createsupabasefetch",
-      "src_integrations_supabase_client_isnewsupabaseapikey",
       "src_integrations_supabase_client_supabase",
-      "src_integrations_supabase_previewauthstorage",
-      "src_integrations_supabase_previewauthstorage_brokeredpreviewstorage",
       "src_lib_branding",
       "src_lib_branding_brand",
       "src_lib_integrations_functions_syncmarketplace",
+      "src_lib_telegram_functions",
       "src_lib_telegram_functions_sendtelegrammessage",
+      "src_lib_telegram_functions_synctelegramgroups",
+      "src_lib_telegram_functions_telegrambotstatus",
       "src_lib_whatsapp_whatsapp_functions_updatewhatsappgroupconfig",
       "src_routes_auth",
       "src_routes_auth_schema",
@@ -99,7 +94,6 @@
       "src_routes_authenticated_ofertas_syncresult",
       "src_routes_authenticated_relatorios",
       "src_routes_authenticated_relatorios_relatorios",
-      "src_routes_authenticated_route",
       "src_routes_authenticated_shopee_analytics",
       "src_routes_authenticated_shopee_analytics_periodmode",
       "src_routes_authenticated_whatsapp_configuracoes",
@@ -204,129 +198,6 @@
       "src_routes_authenticated_whatsapp_conexoes_whatsappconexoespage"
     ],
     "2": [
-      "src_components_offers_offercard_realoffer",
-      "src_integrations_supabase_auth_middleware",
-      "src_integrations_supabase_auth_middleware_createsupabasefetch",
-      "src_integrations_supabase_auth_middleware_isnewsupabaseapikey",
-      "src_integrations_supabase_auth_middleware_requiresupabaseauth",
-      "src_integrations_supabase_client_server",
-      "src_integrations_supabase_client_server_createsupabaseadminclient",
-      "src_integrations_supabase_client_server_createsupabasefetch",
-      "src_integrations_supabase_client_server_isnewsupabaseapikey",
-      "src_integrations_supabase_client_server_supabaseadmin",
-      "src_integrations_supabase_types",
-      "src_integrations_supabase_types_compositetypes",
-      "src_integrations_supabase_types_constants",
-      "src_integrations_supabase_types_database",
-      "src_integrations_supabase_types_databasewithoutinternals",
-      "src_integrations_supabase_types_defaultschema",
-      "src_integrations_supabase_types_enums",
-      "src_integrations_supabase_types_json",
-      "src_integrations_supabase_types_tables",
-      "src_integrations_supabase_types_tablesinsert",
-      "src_integrations_supabase_types_tablesupdate",
-      "src_lib_admin_functions",
-      "src_lib_admin_functions_adminoverview",
-      "src_lib_admin_functions_adminsavesetting",
-      "src_lib_admin_functions_adminsetplan",
-      "src_lib_admin_functions_adminsetrole",
-      "src_lib_admin_functions_adminsettings",
-      "src_lib_admin_functions_adminusers",
-      "src_lib_admin_functions_amiadmin",
-      "src_lib_admin_server",
-      "src_lib_admin_server_assertadmin",
-      "src_lib_admin_server_masksecret",
-      "src_lib_dashboard_functions",
-      "src_lib_dashboard_functions_dashboardstatsdto",
-      "src_lib_dashboard_functions_getdashboardstats",
-      "src_lib_integrations_functions_convertandsaveamazonlinkfn",
-      "src_lib_integrations_functions_diagnoseamazonfn",
-      "src_lib_mercadolivre_functions",
-      "src_lib_mercadolivre_functions_diagnosemercadolivre",
-      "src_lib_mercadolivre_functions_exchangemelicodefn",
-      "src_lib_mercadolivre_functions_meli_redirect_uri",
-      "src_lib_mercadolivre_functions_resolveproductbyurlfn",
-      "src_lib_mercadolivre_functions_searchmeliproductsfn",
-      "src_lib_mercadolivre_functions_startmelioauthfn",
-      "src_lib_mercadolivre_server",
-      "src_lib_mercadolivre_server_applymattparams",
-      "src_lib_mercadolivre_server_credsfromrecord",
-      "src_lib_mercadolivre_server_describemelistatus",
-      "src_lib_mercadolivre_server_diag_names",
-      "src_lib_mercadolivre_server_diagnosticstep",
-      "src_lib_mercadolivre_server_extractreason",
-      "src_lib_mercadolivre_server_meliappcredsfromenv",
-      "src_lib_mercadolivre_server_meliauthorizeurl",
-      "src_lib_mercadolivre_server_melicreds",
-      "src_lib_mercadolivre_server_melidiagnose",
-      "src_lib_mercadolivre_server_melidiagnosis",
-      "src_lib_mercadolivre_server_melierror",
-      "src_lib_mercadolivre_server_meliexchangecode",
-      "src_lib_mercadolivre_server_melifetch",
-      "src_lib_mercadolivre_server_melifetchoptions",
-      "src_lib_mercadolivre_server_melirefreshaccesstoken",
-      "src_lib_mercadolivre_server_meliresult",
-      "src_lib_mercadolivre_server_validateaffiliateurl"
-    ],
-    "3": [
-      "src_hooks_useauth",
-      "src_hooks_useauth_useauth",
-      "src_lib_demo_data",
-      "src_lib_demo_data_base",
-      "src_lib_demo_data_days",
-      "src_lib_demo_data_demo_by_category",
-      "src_lib_demo_data_demo_by_group",
-      "src_lib_demo_data_demo_by_marketplace",
-      "src_lib_demo_data_demo_metrics",
-      "src_lib_demo_data_demo_offers",
-      "src_lib_demo_data_demo_series",
-      "src_lib_demo_data_demooffer",
-      "src_lib_engines_antispamengine",
-      "src_lib_engines_antispamengine_antispamcheckinput",
-      "src_lib_engines_antispamengine_antispamresult",
-      "src_lib_engines_antispamengine_antispamrules",
-      "src_lib_engines_antispamengine_checkantispam",
-      "src_lib_engines_antispamengine_default_anti_spam_rules",
-      "src_lib_engines_antispamengine_iswithintimewindow",
-      "src_lib_engines_antispamengine_nextallowedsendtime",
-      "src_lib_engines_copyintelligenceengine_copygenerationoptions",
-      "src_lib_engines_copyintelligenceengine_copyofferinput",
-      "src_lib_engines_copyintelligenceengine_injectsubid",
-      "src_lib_engines_offerintelligenceengine",
-      "src_lib_engines_offerintelligenceengine_fullpipelineresult",
-      "src_lib_engines_offerintelligenceengine_normalizedoffer",
-      "src_lib_engines_offerintelligenceengine_pipelinegroupconfig",
-      "src_lib_engines_offerintelligenceengine_pipelineitemresult",
-      "src_lib_engines_offerintelligenceengine_runofferpipeline",
-      "src_lib_engines_pricehistoryengine",
-      "src_lib_engines_pricehistoryengine_computepricestats",
-      "src_lib_engines_pricehistoryengine_computerealdiscount",
-      "src_lib_engines_pricehistoryengine_formatpricevariation",
-      "src_lib_engines_pricehistoryengine_pricehistorystats",
-      "src_lib_engines_pricehistoryengine_pricesnapshot",
-      "src_lib_engines_pricehistoryengine_realdiscountresult",
-      "src_lib_engines_segmentationengine",
-      "src_lib_engines_segmentationengine_countkeywordmatches",
-      "src_lib_engines_segmentationengine_groupprofile",
-      "src_lib_engines_segmentationengine_offerprofile",
-      "src_lib_engines_segmentationengine_segmentationdecision",
-      "src_lib_engines_segmentationengine_segmentationresult",
-      "src_lib_engines_segmentationengine_segmentoffertogroups",
-      "src_lib_engines_segmentationengine_tokenize",
-      "src_lib_offer_score",
-      "src_lib_offer_score_clamp01",
-      "src_lib_offer_score_computeofferscore",
-      "src_lib_offer_score_default_weights",
-      "src_lib_offer_score_offerscorefactor",
-      "src_lib_offer_score_offerscoreinput",
-      "src_lib_offer_score_offerscorelabel",
-      "src_lib_offer_score_offerscoreresult",
-      "src_lib_offer_score_offerscoreweights",
-      "src_routes_authenticated_configuracoes",
-      "src_routes_authenticated_configuracoes_configuracoes",
-      "src_routes_authenticated_configuracoes_route"
-    ],
-    "4": [
       "src_integrations_channels_index",
       "src_integrations_channels_index_awaiting",
       "src_integrations_channels_index_channel_connectors",
@@ -346,6 +217,10 @@
       "src_integrations_marketplaces_index_detectmarketplace",
       "src_integrations_marketplaces_index_marketplace_adapters",
       "src_integrations_marketplaces_types_marketplaceslug",
+      "src_integrations_supabase_auth_middleware",
+      "src_integrations_supabase_auth_middleware_createsupabasefetch",
+      "src_integrations_supabase_auth_middleware_isnewsupabaseapikey",
+      "src_integrations_supabase_auth_middleware_requiresupabaseauth",
       "src_lib_affiliate_affiliate_functions",
       "src_lib_affiliate_affiliate_functions_listaffiliatelinks",
       "src_lib_affiliate_affiliate_functions_resolveaffiliatelink",
@@ -356,6 +231,8 @@
       "src_lib_affiliate_affiliatelinkresolver_resolveaffiliatelinkparams",
       "src_lib_integrations_functions",
       "src_lib_integrations_functions_buildaffiliatelinkfn",
+      "src_lib_integrations_functions_convertandsaveamazonlinkfn",
+      "src_lib_integrations_functions_diagnoseamazonfn",
       "src_lib_integrations_functions_disconnectintegration",
       "src_lib_integrations_functions_listintegrations",
       "src_lib_integrations_functions_saveintegration",
@@ -384,61 +261,70 @@
       "src_lib_sync_sync_functions_syncmarketplacefn",
       "src_lib_sync_sync_functions_updateautosyncintervalfn"
     ],
-    "5": [
-      "src_integrations_marketplaces_amazon",
-      "src_integrations_marketplaces_amazon_amazonadapter",
-      "src_integrations_marketplaces_index",
-      "src_integrations_marketplaces_index_marketplace_list",
-      "src_integrations_marketplaces_index_marketplacename",
-      "src_integrations_marketplaces_mercadolivre",
-      "src_integrations_marketplaces_mercadolivre_mercadolivreadapter",
-      "src_integrations_marketplaces_mercadolivre_normalizemeliitem",
-      "src_integrations_marketplaces_shein",
-      "src_integrations_marketplaces_shein_sheinadapter",
-      "src_integrations_marketplaces_shopee",
-      "src_integrations_marketplaces_shopee_normalizeshopeenode",
-      "src_integrations_marketplaces_shopee_shopeeadapter",
-      "src_integrations_marketplaces_types",
-      "src_integrations_marketplaces_types_adapterresult",
-      "src_integrations_marketplaces_types_cap_full",
-      "src_integrations_marketplaces_types_cap_link_only",
-      "src_integrations_marketplaces_types_cap_manual",
-      "src_integrations_marketplaces_types_cap_unavailable",
-      "src_integrations_marketplaces_types_capabilityinfo",
-      "src_integrations_marketplaces_types_capabilitylevel",
-      "src_integrations_marketplaces_types_credentialfield",
-      "src_integrations_marketplaces_types_integrationstate",
-      "src_integrations_marketplaces_types_marketplaceadapter",
-      "src_integrations_marketplaces_types_marketplaceadapter_buildaffiliatelink",
-      "src_integrations_marketplaces_types_marketplaceadapter_getproduct",
-      "src_integrations_marketplaces_types_marketplaceadapter_listoffers",
-      "src_integrations_marketplaces_types_marketplaceadapter_matchesurl",
-      "src_integrations_marketplaces_types_marketplaceadapter_searchproducts",
-      "src_integrations_marketplaces_types_marketplaceadapter_syncoffers",
-      "src_integrations_marketplaces_types_marketplaceadapter_testconnection",
-      "src_integrations_marketplaces_types_marketplacecapabilities",
-      "src_integrations_marketplaces_types_normalizedproduct",
-      "src_integrations_marketplaces_types_notconfigured",
-      "src_integrations_marketplaces_types_notsupported",
-      "src_integrations_marketplaces_types_searchparams",
-      "src_integrations_marketplaces_types_syncreport",
-      "src_lib_mercadolivre_server_extractmeliid",
-      "src_lib_mercadolivre_server_melitestauth",
-      "src_lib_shopee_server",
-      "src_lib_shopee_server_sha256hex",
-      "src_lib_shopee_server_shopeecall",
-      "src_lib_shopee_server_shopeeconversionnode",
-      "src_lib_shopee_server_shopeeconversions",
-      "src_lib_shopee_server_shopeecreds",
-      "src_lib_shopee_server_shopeegenerateshortlink",
-      "src_lib_shopee_server_shopeegraphql",
-      "src_lib_shopee_server_shopeeoffernode",
-      "src_lib_shopee_server_shopeesearchproducts",
-      "src_lib_shopee_server_shopeetestconnection",
-      "src_lib_shopee_server_shopeetopsellers",
-      "src_lib_shopee_server_tonumber"
+    "3": [
+      "src_lib_credentials_server",
+      "src_lib_credentials_server_getcredentials",
+      "src_lib_demo_data",
+      "src_lib_demo_data_base",
+      "src_lib_demo_data_days",
+      "src_lib_demo_data_demo_by_category",
+      "src_lib_demo_data_demo_by_group",
+      "src_lib_demo_data_demo_by_marketplace",
+      "src_lib_demo_data_demo_metrics",
+      "src_lib_demo_data_demo_offers",
+      "src_lib_demo_data_demo_series",
+      "src_lib_demo_data_demooffer",
+      "src_lib_engines_antispamengine",
+      "src_lib_engines_antispamengine_antispamcheckinput",
+      "src_lib_engines_antispamengine_antispamresult",
+      "src_lib_engines_antispamengine_antispamrules",
+      "src_lib_engines_antispamengine_checkantispam",
+      "src_lib_engines_antispamengine_default_anti_spam_rules",
+      "src_lib_engines_antispamengine_iswithintimewindow",
+      "src_lib_engines_antispamengine_nextallowedsendtime",
+      "src_lib_engines_copyintelligenceengine",
+      "src_lib_engines_copyintelligenceengine_brandconfig",
+      "src_lib_engines_copyintelligenceengine_copy_style_options",
+      "src_lib_engines_copyintelligenceengine_copygenerationoptions",
+      "src_lib_engines_copyintelligenceengine_copyofferinput",
+      "src_lib_engines_copyintelligenceengine_copystyle",
+      "src_lib_engines_copyintelligenceengine_injectsubid",
+      "src_lib_engines_copyintelligenceengine_style_config",
+      "src_lib_engines_offerintelligenceengine",
+      "src_lib_engines_offerintelligenceengine_fullpipelineresult",
+      "src_lib_engines_offerintelligenceengine_normalizedoffer",
+      "src_lib_engines_offerintelligenceengine_pipelinegroupconfig",
+      "src_lib_engines_offerintelligenceengine_pipelineitemresult",
+      "src_lib_engines_offerintelligenceengine_runofferpipeline",
+      "src_lib_engines_pricehistoryengine",
+      "src_lib_engines_pricehistoryengine_computepricestats",
+      "src_lib_engines_pricehistoryengine_computerealdiscount",
+      "src_lib_engines_pricehistoryengine_formatpricevariation",
+      "src_lib_engines_pricehistoryengine_pricehistorystats",
+      "src_lib_engines_pricehistoryengine_pricesnapshot",
+      "src_lib_engines_pricehistoryengine_realdiscountresult",
+      "src_lib_engines_segmentationengine",
+      "src_lib_engines_segmentationengine_countkeywordmatches",
+      "src_lib_engines_segmentationengine_groupprofile",
+      "src_lib_engines_segmentationengine_offerprofile",
+      "src_lib_engines_segmentationengine_segmentationdecision",
+      "src_lib_engines_segmentationengine_segmentationresult",
+      "src_lib_engines_segmentationengine_segmentoffertogroups",
+      "src_lib_engines_segmentationengine_tokenize",
+      "src_lib_offer_score",
+      "src_lib_offer_score_clamp01",
+      "src_lib_offer_score_computeofferscore",
+      "src_lib_offer_score_offerscorefactor",
+      "src_lib_offer_score_offerscoreinput",
+      "src_lib_offer_score_offerscorelabel",
+      "src_lib_offer_score_offerscoreresult",
+      "src_lib_offer_score_offerscoreweights",
+      "src_lib_shopee_functions",
+      "src_lib_shopee_functions_rangeschema",
+      "src_lib_shopee_functions_refreshtopsellers",
+      "src_lib_shopee_functions_shopeeanalytics"
     ],
-    "6": [
+    "4": [
       "src_components_ui_accordion",
       "src_components_ui_accordion_accordioncontent",
       "src_components_ui_accordion_accordionitem",
@@ -491,59 +377,60 @@
       "src_components_ui_select_selectseparator",
       "src_lib_utils_cn"
     ],
-    "7": [
-      "src_components_emptystate",
-      "src_components_emptystate_emptystate",
-      "src_components_offers_offercard",
-      "src_components_offers_offercard_marketplace_color",
-      "src_components_offers_offercard_marketplace_label",
-      "src_components_offers_offercard_offercard",
-      "src_components_offers_offercard_offercard_copymessage",
-      "src_components_offers_offercard_tone",
-      "src_components_offers_publishdialog_publishdialog",
-      "src_lib_copy_generator",
-      "src_lib_copy_generator_copy_styles",
-      "src_lib_copy_generator_copylength",
-      "src_lib_copy_generator_copyoffer",
-      "src_lib_copy_generator_copyoptions",
-      "src_lib_copy_generator_copystyle",
-      "src_lib_copy_generator_default_template_body",
-      "src_lib_copy_generator_emoji",
-      "src_lib_copy_generator_generatecopy",
-      "src_lib_copy_generator_rendertemplate",
-      "src_lib_copy_generator_template_variables",
-      "src_lib_copy_generator_templatevariable",
-      "src_lib_engines_copyintelligenceengine",
-      "src_lib_engines_copyintelligenceengine_brandconfig",
-      "src_lib_engines_copyintelligenceengine_copy_style_options",
-      "src_lib_engines_copyintelligenceengine_copystyle",
-      "src_lib_engines_copyintelligenceengine_generateintelligentcopy",
-      "src_lib_engines_copyintelligenceengine_style_config",
-      "src_lib_format",
-      "src_lib_format_brl",
-      "src_lib_format_datetime",
-      "src_lib_format_daylabel",
-      "src_lib_format_greeting",
-      "src_lib_format_nowlabel",
-      "src_lib_format_num",
-      "src_lib_format_pct",
-      "src_lib_format_rating",
-      "src_lib_offer_score_scorelabel",
-      "src_lib_offer_score_scoretone",
-      "src_lib_whatsapp_share",
-      "src_lib_whatsapp_share_copytext",
-      "src_lib_whatsapp_share_sharetext",
-      "src_lib_whatsapp_share_whatsappshareurl",
-      "src_routes_authenticated_dashboard",
-      "src_routes_authenticated_dashboard_dashboard",
-      "src_routes_authenticated_dashboard_kpi",
-      "src_routes_authenticated_fila",
-      "src_routes_authenticated_fila_fila",
-      "src_routes_authenticated_fila_queuerow",
-      "src_routes_authenticated_fila_route",
-      "src_routes_authenticated_shopee_analytics_shopeeanalyticspage"
+    "5": [
+      "src_integrations_marketplaces_amazon",
+      "src_integrations_marketplaces_amazon_amazonadapter",
+      "src_integrations_marketplaces_index",
+      "src_integrations_marketplaces_index_marketplace_list",
+      "src_integrations_marketplaces_index_marketplacename",
+      "src_integrations_marketplaces_mercadolivre",
+      "src_integrations_marketplaces_mercadolivre_mercadolivreadapter",
+      "src_integrations_marketplaces_mercadolivre_normalizemeliitem",
+      "src_integrations_marketplaces_shein",
+      "src_integrations_marketplaces_shein_sheinadapter",
+      "src_integrations_marketplaces_shopee",
+      "src_integrations_marketplaces_shopee_normalizeshopeenode",
+      "src_integrations_marketplaces_shopee_shopeeadapter",
+      "src_integrations_marketplaces_types",
+      "src_integrations_marketplaces_types_adapterresult",
+      "src_integrations_marketplaces_types_cap_full",
+      "src_integrations_marketplaces_types_cap_link_only",
+      "src_integrations_marketplaces_types_cap_manual",
+      "src_integrations_marketplaces_types_cap_unavailable",
+      "src_integrations_marketplaces_types_capabilityinfo",
+      "src_integrations_marketplaces_types_capabilitylevel",
+      "src_integrations_marketplaces_types_credentialfield",
+      "src_integrations_marketplaces_types_integrationstate",
+      "src_integrations_marketplaces_types_marketplaceadapter",
+      "src_integrations_marketplaces_types_marketplaceadapter_buildaffiliatelink",
+      "src_integrations_marketplaces_types_marketplaceadapter_getproduct",
+      "src_integrations_marketplaces_types_marketplaceadapter_listoffers",
+      "src_integrations_marketplaces_types_marketplaceadapter_matchesurl",
+      "src_integrations_marketplaces_types_marketplaceadapter_searchproducts",
+      "src_integrations_marketplaces_types_marketplaceadapter_syncoffers",
+      "src_integrations_marketplaces_types_marketplaceadapter_testconnection",
+      "src_integrations_marketplaces_types_marketplacecapabilities",
+      "src_integrations_marketplaces_types_normalizedproduct",
+      "src_integrations_marketplaces_types_notconfigured",
+      "src_integrations_marketplaces_types_notsupported",
+      "src_integrations_marketplaces_types_searchparams",
+      "src_integrations_marketplaces_types_syncreport",
+      "src_lib_mercadolivre_server_melitestauth",
+      "src_lib_shopee_server",
+      "src_lib_shopee_server_sha256hex",
+      "src_lib_shopee_server_shopeecall",
+      "src_lib_shopee_server_shopeeconversionnode",
+      "src_lib_shopee_server_shopeeconversions",
+      "src_lib_shopee_server_shopeecreds",
+      "src_lib_shopee_server_shopeegenerateshortlink",
+      "src_lib_shopee_server_shopeegraphql",
+      "src_lib_shopee_server_shopeeoffernode",
+      "src_lib_shopee_server_shopeesearchproducts",
+      "src_lib_shopee_server_shopeetestconnection",
+      "src_lib_shopee_server_shopeetopsellers",
+      "src_lib_shopee_server_tonumber"
     ],
-    "8": [
+    "6": [
       "eslint",
       "eslint_config_prettier",
       "eslint_js",
@@ -594,7 +481,58 @@
       "vite",
       "vitejs_plugin_react"
     ],
-    "9": [
+    "7": [
+      "src_components_emptystate",
+      "src_components_emptystate_emptystate",
+      "src_components_offers_offercard",
+      "src_components_offers_offercard_marketplace_color",
+      "src_components_offers_offercard_marketplace_label",
+      "src_components_offers_offercard_offercard",
+      "src_components_offers_offercard_offercard_copymessage",
+      "src_components_offers_offercard_realoffer",
+      "src_components_offers_offercard_tone",
+      "src_components_offers_publishdialog_publishdialog",
+      "src_lib_copy_generator",
+      "src_lib_copy_generator_copy_styles",
+      "src_lib_copy_generator_copylength",
+      "src_lib_copy_generator_copyoffer",
+      "src_lib_copy_generator_copyoptions",
+      "src_lib_copy_generator_copystyle",
+      "src_lib_copy_generator_default_template_body",
+      "src_lib_copy_generator_emoji",
+      "src_lib_copy_generator_generatecopy",
+      "src_lib_copy_generator_rendertemplate",
+      "src_lib_copy_generator_template_variables",
+      "src_lib_copy_generator_templatevariable",
+      "src_lib_dashboard_functions",
+      "src_lib_dashboard_functions_dashboardstatsdto",
+      "src_lib_dashboard_functions_getdashboardstats",
+      "src_lib_engines_copyintelligenceengine_generateintelligentcopy",
+      "src_lib_format",
+      "src_lib_format_brl",
+      "src_lib_format_datetime",
+      "src_lib_format_daylabel",
+      "src_lib_format_greeting",
+      "src_lib_format_nowlabel",
+      "src_lib_format_num",
+      "src_lib_format_pct",
+      "src_lib_format_rating",
+      "src_lib_offer_score_scorelabel",
+      "src_lib_offer_score_scoretone",
+      "src_lib_whatsapp_share",
+      "src_lib_whatsapp_share_copytext",
+      "src_lib_whatsapp_share_sharetext",
+      "src_lib_whatsapp_share_whatsappshareurl",
+      "src_routes_authenticated_dashboard",
+      "src_routes_authenticated_dashboard_dashboard",
+      "src_routes_authenticated_dashboard_kpi",
+      "src_routes_authenticated_fila",
+      "src_routes_authenticated_fila_fila",
+      "src_routes_authenticated_fila_queuerow",
+      "src_routes_authenticated_fila_route",
+      "src_routes_authenticated_shopee_analytics_shopeeanalyticspage"
+    ],
+    "8": [
       "src_components_ui_separator",
       "src_components_ui_separator_separator",
       "src_components_ui_sheet",
@@ -641,7 +579,92 @@
       "src_hooks_use_mobile",
       "src_hooks_use_mobile_useismobile"
     ],
+    "9": [
+      "src_integrations_supabase_client_server",
+      "src_integrations_supabase_client_server_createsupabaseadminclient",
+      "src_integrations_supabase_client_server_createsupabasefetch",
+      "src_integrations_supabase_client_server_isnewsupabaseapikey",
+      "src_integrations_supabase_client_server_supabaseadmin",
+      "src_lib_admin_functions",
+      "src_lib_admin_functions_adminoverview",
+      "src_lib_admin_functions_adminsavesetting",
+      "src_lib_admin_functions_adminsetplan",
+      "src_lib_admin_functions_adminsetrole",
+      "src_lib_admin_functions_adminsettings",
+      "src_lib_admin_functions_adminusers",
+      "src_lib_admin_functions_amiadmin",
+      "src_lib_admin_server",
+      "src_lib_admin_server_assertadmin",
+      "src_lib_admin_server_masksecret",
+      "src_lib_mercadolivre_functions",
+      "src_lib_mercadolivre_functions_diagnosemercadolivre",
+      "src_lib_mercadolivre_functions_exchangemelicodefn",
+      "src_lib_mercadolivre_functions_meli_redirect_uri",
+      "src_lib_mercadolivre_functions_resolveproductbyurlfn",
+      "src_lib_mercadolivre_functions_searchmeliproductsfn",
+      "src_lib_mercadolivre_functions_startmelioauthfn",
+      "src_lib_mercadolivre_server",
+      "src_lib_mercadolivre_server_applymattparams",
+      "src_lib_mercadolivre_server_credsfromrecord",
+      "src_lib_mercadolivre_server_describemelistatus",
+      "src_lib_mercadolivre_server_diag_names",
+      "src_lib_mercadolivre_server_diagnosticstep",
+      "src_lib_mercadolivre_server_extractmeliid",
+      "src_lib_mercadolivre_server_extractmeliidfromurl",
+      "src_lib_mercadolivre_server_extractreason",
+      "src_lib_mercadolivre_server_meliappcredsfromenv",
+      "src_lib_mercadolivre_server_meliauthorizeurl",
+      "src_lib_mercadolivre_server_melicreds",
+      "src_lib_mercadolivre_server_melidiagnose",
+      "src_lib_mercadolivre_server_melidiagnosis",
+      "src_lib_mercadolivre_server_melierror",
+      "src_lib_mercadolivre_server_meliexchangecode",
+      "src_lib_mercadolivre_server_melifetch",
+      "src_lib_mercadolivre_server_melifetchoptions",
+      "src_lib_mercadolivre_server_melirefreshaccesstoken",
+      "src_lib_mercadolivre_server_meliresult",
+      "src_lib_mercadolivre_server_validateaffiliateurl"
+    ],
     "10": [
+      "src_components_ui_sonner",
+      "src_components_ui_sonner_toaster",
+      "src_components_ui_sonner_toasterprops",
+      "src_integrations_supabase_auth_attacher",
+      "src_integrations_supabase_auth_attacher_attachsupabaseauth",
+      "src_integrations_supabase_client",
+      "src_integrations_supabase_client_createsupabaseclient",
+      "src_integrations_supabase_client_createsupabasefetch",
+      "src_integrations_supabase_client_isnewsupabaseapikey",
+      "src_integrations_supabase_previewauthstorage",
+      "src_integrations_supabase_previewauthstorage_brokeredpreviewstorage",
+      "src_integrations_supabase_types",
+      "src_integrations_supabase_types_compositetypes",
+      "src_integrations_supabase_types_constants",
+      "src_integrations_supabase_types_database",
+      "src_integrations_supabase_types_databasewithoutinternals",
+      "src_integrations_supabase_types_defaultschema",
+      "src_integrations_supabase_types_enums",
+      "src_integrations_supabase_types_json",
+      "src_integrations_supabase_types_tables",
+      "src_integrations_supabase_types_tablesinsert",
+      "src_integrations_supabase_types_tablesupdate",
+      "src_lib_app_state",
+      "src_lib_app_state_appstate",
+      "src_lib_app_state_appstateprovider",
+      "src_lib_app_state_ctx",
+      "src_lib_app_state_useappstate",
+      "src_lib_lovable_error_reporting",
+      "src_lib_lovable_error_reporting_lovableerroroptions",
+      "src_lib_lovable_error_reporting_lovableevents",
+      "src_lib_lovable_error_reporting_reportlovableerror",
+      "src_lib_lovable_error_reporting_window",
+      "src_routes_root",
+      "src_routes_root_errorcomponent",
+      "src_routes_root_notfoundcomponent",
+      "src_routes_root_rootcomponent",
+      "src_routes_root_rootshell"
+    ],
+    "11": [
       "src_components_automacoes_automationbuilderdialog_automationbuilderdialog",
       "src_components_automacoes_automationbuilderdialog_automationrule",
       "src_lib_automation_functions",
@@ -664,15 +687,6 @@
       "src_lib_automation_server_rendercopy",
       "src_lib_automation_server_runautomation",
       "src_lib_automation_server_runresult",
-      "src_lib_credentials_server",
-      "src_lib_credentials_server_getcredentials",
-      "src_lib_shopee_functions",
-      "src_lib_shopee_functions_rangeschema",
-      "src_lib_shopee_functions_refreshtopsellers",
-      "src_lib_shopee_functions_shopeeanalytics",
-      "src_lib_telegram_functions",
-      "src_lib_telegram_functions_synctelegramgroups",
-      "src_lib_telegram_functions_telegrambotstatus",
       "src_lib_telegram_server",
       "src_lib_telegram_server_tg",
       "src_lib_telegram_server_tgchat",
@@ -684,10 +698,9 @@
       "src_routes_authenticated_automacoes",
       "src_routes_authenticated_automacoes_automacoes",
       "src_routes_authenticated_automacoes_automationrow",
-      "src_routes_authenticated_automacoes_route",
       "src_routes_authenticated_automacoes_rowtorule"
     ],
-    "11": [
+    "12": [
       "ref_dom",
       "ref_dom_iterable",
       "ref_es2022",
@@ -721,7 +734,7 @@
       "tsconfig_compileroptions_verbatimmodulesyntax",
       "tsconfig_include"
     ],
-    "12": [
+    "13": [
       "src_routetree_gen",
       "src_routetree_gen_authenticatedadminroute",
       "src_routetree_gen_authenticatedautomacoesroute",
@@ -752,7 +765,7 @@
       "src_routetree_gen_tanstack_react_router",
       "src_routetree_gen_tanstack_react_start"
     ],
-    "13": [
+    "14": [
       "src_components_ui_hover_card",
       "src_components_ui_hover_card_hovercardcontent",
       "src_components_ui_popover",
@@ -779,7 +792,7 @@
       "src_components_ui_toggle_togglevariants",
       "src_lib_utils"
     ],
-    "14": [
+    "15": [
       "server_entry",
       "src_lib_auth_retry_middleware",
       "src_lib_auth_retry_middleware_attachsupabaseauthwithretry",
@@ -804,7 +817,7 @@
       "src_start_csrfmiddleware",
       "src_start_errormiddleware"
     ],
-    "15": [
+    "16": [
       "src_components_ui_alert_dialog",
       "src_components_ui_alert_dialog_alertdialogaction",
       "src_components_ui_alert_dialog_alertdialogcancel",
@@ -829,7 +842,7 @@
       "src_components_ui_pagination_paginationnext",
       "src_components_ui_pagination_paginationprevious"
     ],
-    "16": [
+    "17": [
       "components",
       "components_aliases",
       "components_aliases_components",
@@ -850,36 +863,16 @@
       "components_tailwind_prefix",
       "components_tsx"
     ],
-    "17": [
-      "src_components_ui_sonner",
-      "src_components_ui_sonner_toaster",
-      "src_components_ui_sonner_toasterprops",
-      "src_lib_app_state",
-      "src_lib_app_state_appstate",
-      "src_lib_app_state_appstateprovider",
-      "src_lib_app_state_ctx",
-      "src_lib_app_state_useappstate",
-      "src_lib_lovable_error_reporting",
-      "src_lib_lovable_error_reporting_lovableerroroptions",
-      "src_lib_lovable_error_reporting_lovableevents",
-      "src_lib_lovable_error_reporting_reportlovableerror",
-      "src_lib_lovable_error_reporting_window",
-      "src_routes_root",
-      "src_routes_root_errorcomponent",
-      "src_routes_root_notfoundcomponent",
-      "src_routes_root_rootcomponent",
-      "src_routes_root_rootshell"
-    ],
     "18": [
       "src_routes_auth_route",
       "src_routes_authenticated_admin_route",
+      "src_routes_authenticated_automacoes_route",
       "src_routes_authenticated_dashboard_route",
       "src_routes_authenticated_grupos_route",
       "src_routes_authenticated_integracoes_route",
       "src_routes_authenticated_mercadolivre_route",
       "src_routes_authenticated_ofertas_route",
       "src_routes_authenticated_relatorios_route",
-      "src_routes_authenticated_route_route",
       "src_routes_authenticated_shopee_analytics_route",
       "src_routes_authenticated_whatsapp_conexoes_route",
       "src_routes_authenticated_whatsapp_configuracoes_route",
@@ -1036,6 +1029,14 @@
       "src_components_ui_card_cardtitle"
     ],
     "31": [
+      "src_hooks_useauth",
+      "src_hooks_useauth_useauth",
+      "src_lib_offer_score_default_weights",
+      "src_routes_authenticated_configuracoes",
+      "src_routes_authenticated_configuracoes_configuracoes",
+      "src_routes_authenticated_configuracoes_route"
+    ],
+    "32": [
       "src_lib_engines_retryengine",
       "src_lib_engines_retryengine_computeretrydecision",
       "src_lib_engines_retryengine_default_retry_config",
@@ -1043,286 +1044,290 @@
       "src_lib_engines_retryengine_retrydecision",
       "src_lib_engines_retryengine_retrystatuslabel"
     ],
-    "32": [
+    "33": [
       "src_components_ui_alert",
       "src_components_ui_alert_alert",
       "src_components_ui_alert_alertdescription",
       "src_components_ui_alert_alerttitle",
       "src_components_ui_alert_alertvariants"
     ],
-    "33": [
+    "34": [
       "src_components_ui_input_otp",
       "src_components_ui_input_otp_inputotp",
       "src_components_ui_input_otp_inputotpgroup",
       "src_components_ui_input_otp_inputotpseparator",
       "src_components_ui_input_otp_inputotpslot"
     ],
-    "34": [
+    "35": [
       "src_lib_engines_besttimeengine",
       "src_lib_engines_besttimeengine_analyzebesttime",
       "src_lib_engines_besttimeengine_besttimeresult",
       "src_lib_engines_besttimeengine_day_labels",
       "src_lib_engines_besttimeengine_hourperformance"
     ],
-    "35": [
+    "36": [
       "src_router",
       "src_router_getrouter",
       "src_routetree_gen_register",
       "src_routetree_gen_routetree",
       "src_start_startinstance"
     ],
-    "36": [
+    "37": [
       "src_routes_index",
       "src_routes_index_features",
       "src_routes_index_landing",
       "src_routes_index_route"
     ],
-    "37": [
+    "38": [
       "node_crypto",
       "src_integrations_supabase_cron_auth",
       "src_integrations_supabase_cron_auth_authenticatecronrequest"
     ],
-    "38": [
+    "39": [
       "src_routes_auth_authpage",
       "src_routes_auth_authpage_google",
       "src_routes_auth_authpage_submit"
     ],
-    "39": [
+    "40": [
       "clsx",
       "package_dependencies_clsx"
     ],
-    "40": [
+    "41": [
       "cmdk",
       "package_dependencies_cmdk"
     ],
-    "41": [
+    "42": [
       "date_fns",
       "package_dependencies_date_fns"
     ],
-    "42": [
+    "43": [
       "hookform_resolvers",
       "package_dependencies_hookform_resolvers"
     ],
-    "43": [
+    "44": [
       "input_otp",
       "package_dependencies_input_otp"
     ],
-    "44": [
+    "45": [
       "lovable_dev_cloud_auth_js",
       "package_dependencies_lovable_dev_cloud_auth_js"
     ],
-    "45": [
+    "46": [
       "lucide_react",
       "package_dependencies_lucide_react"
     ],
-    "46": [
+    "47": [
       "package_dependencies_radix_ui_react_accordion",
       "radix_ui_react_accordion"
     ],
-    "47": [
+    "48": [
       "package_dependencies_radix_ui_react_alert_dialog",
       "radix_ui_react_alert_dialog"
     ],
-    "48": [
+    "49": [
       "package_dependencies_radix_ui_react_aspect_ratio",
       "radix_ui_react_aspect_ratio"
     ],
-    "49": [
+    "50": [
       "package_dependencies_radix_ui_react_avatar",
       "radix_ui_react_avatar"
     ],
-    "50": [
+    "51": [
       "package_dependencies_radix_ui_react_checkbox",
       "radix_ui_react_checkbox"
     ],
-    "51": [
+    "52": [
       "package_dependencies_radix_ui_react_collapsible",
       "radix_ui_react_collapsible"
     ],
-    "52": [
+    "53": [
       "package_dependencies_radix_ui_react_context_menu",
       "radix_ui_react_context_menu"
     ],
-    "53": [
+    "54": [
       "package_dependencies_radix_ui_react_dialog",
       "radix_ui_react_dialog"
     ],
-    "54": [
+    "55": [
       "package_dependencies_radix_ui_react_dropdown_menu",
       "radix_ui_react_dropdown_menu"
     ],
-    "55": [
+    "56": [
       "package_dependencies_radix_ui_react_hover_card",
       "radix_ui_react_hover_card"
     ],
-    "56": [
+    "57": [
       "package_dependencies_radix_ui_react_label",
       "radix_ui_react_label"
     ],
-    "57": [
+    "58": [
       "package_dependencies_radix_ui_react_menubar",
       "radix_ui_react_menubar"
     ],
-    "58": [
+    "59": [
       "package_dependencies_radix_ui_react_navigation_menu",
       "radix_ui_react_navigation_menu"
     ],
-    "59": [
+    "60": [
       "package_dependencies_radix_ui_react_popover",
       "radix_ui_react_popover"
     ],
-    "60": [
+    "61": [
       "package_dependencies_radix_ui_react_progress",
       "radix_ui_react_progress"
     ],
-    "61": [
+    "62": [
       "package_dependencies_radix_ui_react_radio_group",
       "radix_ui_react_radio_group"
     ],
-    "62": [
+    "63": [
       "package_dependencies_radix_ui_react_select",
       "radix_ui_react_select"
     ],
-    "63": [
+    "64": [
       "package_dependencies_radix_ui_react_separator",
       "radix_ui_react_separator"
     ],
-    "64": [
+    "65": [
       "package_dependencies_radix_ui_react_slider",
       "radix_ui_react_slider"
     ],
-    "65": [
+    "66": [
       "package_dependencies_radix_ui_react_slot",
       "radix_ui_react_slot"
     ],
-    "66": [
+    "67": [
       "package_dependencies_radix_ui_react_switch",
       "radix_ui_react_switch"
     ],
-    "67": [
+    "68": [
       "package_dependencies_radix_ui_react_tabs",
       "radix_ui_react_tabs"
     ],
-    "68": [
+    "69": [
       "package_dependencies_radix_ui_react_toggle",
       "radix_ui_react_toggle"
     ],
-    "69": [
+    "70": [
       "package_dependencies_radix_ui_react_tooltip",
       "radix_ui_react_tooltip"
     ],
-    "70": [
+    "71": [
       "package_dependencies_react",
       "react"
     ],
-    "71": [
+    "72": [
       "package_dependencies_react_day_picker",
       "react_day_picker"
     ],
-    "72": [
+    "73": [
       "package_dependencies_react_hook_form",
       "react_hook_form"
     ],
-    "73": [
+    "74": [
       "package_dependencies_react_qr_code",
       "react_qr_code"
     ],
-    "74": [
+    "75": [
       "package_dependencies_react_resizable_panels",
       "react_resizable_panels"
     ],
-    "75": [
+    "76": [
       "package_dependencies_sonner",
       "sonner"
     ],
-    "76": [
+    "77": [
       "package_dependencies_tailwind_merge",
       "tailwind_merge"
     ],
-    "77": [
+    "78": [
       "package_dependencies_tailwindcss",
       "tailwindcss"
     ],
-    "78": [
+    "79": [
       "package_dependencies_tailwindcss_vite",
       "tailwindcss_vite"
     ],
-    "79": [
+    "80": [
       "package_dependencies_tanstack_react_query",
       "tanstack_react_query"
     ],
-    "80": [
+    "81": [
       "package_dependencies_tanstack_react_router",
       "tanstack_react_router"
     ],
-    "81": [
+    "82": [
       "package_dependencies_tanstack_react_start",
       "tanstack_react_start"
     ],
-    "82": [
+    "83": [
       "package_dependencies_tanstack_router_plugin",
       "tanstack_router_plugin"
     ],
-    "83": [
+    "84": [
       "package_dependencies_tw_animate_css",
       "tw_animate_css"
     ],
-    "84": [
+    "85": [
       "package_dependencies_vaul",
       "vaul"
     ],
-    "85": [
+    "86": [
       "package_dependencies_vite_tsconfig_paths",
       "vite_tsconfig_paths"
     ],
-    "86": [
+    "87": [
       "package_dependencies_zod",
       "zod"
     ],
-    "87": [
+    "88": [
       "src_components_demobadge",
       "src_components_demobadge_demobadge"
     ],
-    "88": [
+    "89": [
+      "src_routes_authenticated_route",
+      "src_routes_authenticated_route_route"
+    ],
+    "90": [
       "src_routes_authenticated_whatsapp_index",
       "src_routes_authenticated_whatsapp_index_route"
     ],
-    "89": [
+    "91": [
       "src_routes_root_route",
       "src_routetree_gen_fileroutesbyid"
     ],
-    "90": [
+    "92": [
       "eslint_config"
     ],
-    "91": [
+    "93": [
       "src_components_ui_aspect_ratio"
     ],
-    "92": [
+    "94": [
       "src_components_ui_collapsible"
     ],
-    "93": [
+    "95": [
       "vite_config"
     ]
   },
   "cohesion": {
-    "0": 0.062407862407862405,
+    "0": 0.06721611721611721,
     "1": 0.054075235109717866,
-    "2": 0.05427547363031234,
-    "3": 0.06038961038961039,
-    "4": 0.05974025974025974,
-    "5": 0.07767722473604827,
-    "6": 0.06666666666666667,
-    "7": 0.07755102040816327,
-    "8": 0.04081632653061224,
-    "9": 0.0595959595959596,
-    "10": 0.0708245243128964,
-    "11": 0.0625,
-    "12": 0.06896551724137931,
-    "13": 0.09333333333333334,
-    "14": 0.1422924901185771,
-    "15": 0.1067193675889328,
-    "16": 0.10526315789473684,
-    "17": 0.13725490196078433,
+    "2": 0.05552617662612375,
+    "3": 0.0546448087431694,
+    "4": 0.06666666666666667,
+    "5": 0.08,
+    "6": 0.04081632653061224,
+    "7": 0.08078231292517007,
+    "8": 0.0595959595959596,
+    "9": 0.0824524312896406,
+    "10": 0.06756756756756757,
+    "11": 0.0873440285204991,
+    "12": 0.0625,
+    "13": 0.06896551724137931,
+    "14": 0.09333333333333334,
+    "15": 0.1422924901185771,
+    "16": 0.1067193675889328,
+    "17": 0.10526315789473684,
     "18": 0.125,
     "19": 0.13333333333333333,
     "20": 0.18681318681318682,
@@ -1336,15 +1341,15 @@
     "28": 0.25,
     "29": 0.2857142857142857,
     "30": 0.2857142857142857,
-    "31": 0.3333333333333333,
-    "32": 0.5,
-    "33": 0.4,
+    "31": 0.4666666666666667,
+    "32": 0.3333333333333333,
+    "33": 0.5,
     "34": 0.4,
     "35": 0.4,
-    "36": 0.5,
-    "37": 0.6666666666666666,
+    "36": 0.4,
+    "37": 0.5,
     "38": 0.6666666666666666,
-    "39": 1.0,
+    "39": 0.6666666666666666,
     "40": 1.0,
     "41": 1.0,
     "42": 1.0,
@@ -1398,7 +1403,9 @@
     "90": 1.0,
     "91": 1.0,
     "92": 1.0,
-    "93": 1.0
+    "93": 1.0,
+    "94": 1.0,
+    "95": 1.0
   },
   "gods": [
     {
