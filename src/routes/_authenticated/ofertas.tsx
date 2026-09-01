@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { syncMarketplace } from "@/lib/integrations.functions";
+import { resolveProductByUrlFn } from "@/lib/mercadolivre.functions";
+
 
 export const Route = createFileRoute("/_authenticated/ofertas")({
   head: () => ({
@@ -62,6 +64,40 @@ function Ofertas() {
   const [lastSyncResults, setLastSyncResults] = useState<SyncResult[]>([]);
 
   const syncFn = useServerFn(syncMarketplace);
+  const resolveMeliFn = useServerFn(resolveProductByUrlFn);
+
+  // Estado do painel "Adicionar produto ML"
+  const [meliUrl, setMeliUrl] = useState("");
+  const [meliResult, setMeliResult] = useState<{
+    ok: boolean;
+    title?: string;
+    affiliateUrl?: string | null;
+    error?: string;
+  } | null>(null);
+
+  const resolveMeliMutation = useMutation({
+    mutationFn: (url: string) => resolveMeliFn({ data: { url } }),
+    onSuccess: (res) => {
+      if (res.ok && "product" in res) {
+        const p = res.product as any;
+        setMeliResult({ ok: true, title: p.title, affiliateUrl: p.affiliateUrl });
+        toast.success(`Produto adicionado: "${p.title}"`);
+        setMeliUrl("");
+        qc.invalidateQueries({ queryKey: ["offers", "real"] });
+        refetch();
+      } else {
+        const errMsg = "error" in res ? (res as any).error : "Erro desconhecido";
+        setMeliResult({ ok: false, error: errMsg });
+        toast.error(errMsg ?? "Erro ao processar o link do Mercado Livre.");
+      }
+    },
+    onError: (e: any) => {
+      const msg = e?.message ?? "Erro ao comunicar com o servidor.";
+      setMeliResult({ ok: false, error: msg });
+      toast.error(msg);
+    },
+  });
+
 
   // ═══════════════════════════════════════════════════
   // BUSCA DE DADOS REAIS — SEM DEMO DATA
@@ -277,7 +313,69 @@ function Ofertas() {
         </div>
       )}
 
+      {/* PAINEL — ADICIONAR PRODUTO DO MERCADO LIVRE */}
+      <div className="mb-4 rounded-xl border border-yellow-500/25 bg-yellow-500/5 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <Link2 className="size-3.5 text-yellow-600 shrink-0" />
+          <span className="text-xs font-semibold text-foreground">Adicionar produto do Mercado Livre</span>
+          <span className="text-[10px] text-muted-foreground">· cole o link de afiliado ou URL do produto</span>
+        </div>
+
+        <div className="flex gap-2">
+          <Input
+            placeholder="https://www.mercadolivre.com.br/... ou link gerado pelo ML Afiliados"
+            value={meliUrl}
+            onChange={(e) => { setMeliUrl(e.target.value); setMeliResult(null); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && meliUrl.trim() && !resolveMeliMutation.isPending) {
+                resolveMeliMutation.mutate(meliUrl.trim());
+              }
+            }}
+            className="h-9 text-xs font-mono flex-1"
+            disabled={resolveMeliMutation.isPending}
+          />
+          <Button
+            size="sm"
+            className="h-9 text-xs gap-1.5 bg-yellow-500 hover:bg-yellow-600 text-white shrink-0"
+            disabled={!meliUrl.trim() || resolveMeliMutation.isPending}
+            onClick={() => resolveMeliMutation.mutate(meliUrl.trim())}
+          >
+            {resolveMeliMutation.isPending ? (
+              <RefreshCw className="size-3.5 animate-spin" />
+            ) : (
+              <ShoppingCart className="size-3.5" />
+            )}
+            {resolveMeliMutation.isPending ? "Processando..." : "Adicionar"}
+          </Button>
+        </div>
+
+        {/* Feedback inline */}
+        {meliResult && (
+          <div className={`flex items-start gap-2 rounded px-2.5 py-2 text-[11px] ${
+            meliResult.ok
+              ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-700"
+              : "bg-destructive/10 border border-destructive/20 text-destructive"
+          }`}>
+            {meliResult.ok ? (
+              <CheckCircle2 className="size-3.5 mt-0.5 shrink-0" />
+            ) : (
+              <AlertCircle className="size-3.5 mt-0.5 shrink-0" />
+            )}
+            <span className="break-all">
+              {meliResult.ok
+                ? `✅ "${meliResult.title}" adicionado à lista de Ofertas.${meliResult.affiliateUrl ? " Link de afiliado gerado com matt_word e matt_tool." : ""}`
+                : meliResult.error}
+            </span>
+          </div>
+        )}
+
+        <p className="text-[10px] text-muted-foreground">
+          Aceita URLs com <code className="font-mono">item_id</code>, <code className="font-mono">wid</code>, links diretos MLB-... e links gerados pela extensão do ML Afiliados.
+        </p>
+      </div>
+
       {/* FILTROS */}
+
       <div className="mb-5 rounded-xl border border-border bg-card p-3 flex flex-wrap items-center gap-3">
         {/* Busca textual */}
         <Input

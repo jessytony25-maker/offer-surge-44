@@ -347,18 +347,10 @@ export const resolveProductByUrlFn = createServerFn({ method: "POST" })
     const salesCount = typeof item.sold_quantity === "number" ? item.sold_quantity : null;
     const now = new Date().toISOString();
 
-    // Comissão estimada do ML Afiliados (3–12% dependendo da categoria)
-    // Referência: https://afiliados.mercadolivre.com.br/comissoes
-    const categoryId: string = item.category_id || "";
-    const commissionPct = (() => {
-      if (/MLB1648[0-9]|MLB5726[0-9]/i.test(categoryId)) return 12; // Moda
-      if (/MLB1276[0-9]/i.test(categoryId)) return 10; // Beleza
-      if (/MLB1574[0-9]/i.test(categoryId)) return 8;  // Casa
-      if (/MLB1051[0-9]/i.test(categoryId)) return 6;  // Eletronicos
-      if (/MLB1144[0-9]/i.test(categoryId)) return 5;  // Informatica
-      return 4; // default conservador
-    })();
-    const commissionValue = price > 0 ? +(price * (commissionPct / 100)).toFixed(2) : null;
+    // Comissão: NÃO inventar. O ML Afiliados não fornece % via API pública.
+    // Salvar null — a UI exibirá "Comissão não disponível".
+    const commissionPct: number | null = null;
+    const commissionValue: number | null = null;
 
     const { data: prodData } = await context.supabase
       .from("products")
@@ -372,11 +364,33 @@ export const resolveProductByUrlFn = createServerFn({ method: "POST" })
     const { data: offerData } = await context.supabase
       .from("offers")
       .upsert(
-        { user_id: context.userId, product_id: prodData?.id || null, marketplace: "mercadolivre", title, image_url: imageUrl, price, previous_price: originalPrice, discount_pct: discountPct || 0, rating, sales_count: salesCount, original_url: permalink, affiliate_url: affiliateUrl || permalink, score: discountPct ? Math.min(discountPct * 1.5, 100) : 50, status: "new", updated_at: now },
+        {
+          user_id: context.userId,
+          product_id: prodData?.id || null,
+          marketplace: "mercadolivre",
+          title,
+          image_url: imageUrl,
+          price,
+          previous_price: originalPrice,
+          discount_pct: discountPct || 0,
+          rating,
+          sales_count: salesCount,
+          original_url: permalink,
+          affiliate_url: affiliateUrl || permalink,
+          // Comissão: null — não inventar. O ML não fornece via API.
+          commission: null,
+          commission_pct: null,
+          free_shipping: item.shipping?.free_shipping ?? false,
+          available: true,
+          score: discountPct ? Math.min(discountPct * 1.5, 100) : 50,
+          status: "new",
+          updated_at: now,
+        },
         { onConflict: "user_id,marketplace,title" as any },
       )
       .select("id")
       .maybeSingle();
+
 
     // Salvar em affiliate_links APENAS quando o link for realmente resolvido
     if (affiliateStatus === "resolved" && affiliateUrl) {
