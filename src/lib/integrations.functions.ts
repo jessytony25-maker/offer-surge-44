@@ -381,4 +381,346 @@ export const diagnoseAmazonFn = createServerFn({ method: "POST" })
     return report;
   });
 
+/**
+ * Salva ou atualiza um produto no catálogo curado da Amazon com geração automática de link de afiliado.
+ */
+export const saveAmazonProductOfferFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: {
+    asinOrUrl: string;
+    title: string;
+    imageUrl?: string;
+    price: number;
+    previousPrice?: number | null;
+    category?: string;
+    freeShipping?: boolean;
+    offerId?: string;
+  }) =>
+    z
+      .object({
+        asinOrUrl: z.string().min(1, "Informe a URL ou ASIN da Amazon"),
+        title: z.string().min(2, "Informe o título do produto"),
+        imageUrl: z.string().optional(),
+        price: z.number().min(0, "Preço deve ser positivo"),
+        previousPrice: z.number().nullable().optional(),
+        category: z.string().optional(),
+        freeShipping: z.boolean().optional(),
+        offerId: z.string().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { asinOrUrl, title, imageUrl, price, previousPrice, freeShipping, offerId } = data;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1. Extrair ASIN (10 caracteres alfanuméricos)
+    let asin = "";
+    const cleanInput = asinOrUrl.trim();
+    const asinMatch = cleanInput.match(/\/dp\/([A-Z0-9]{10})|\/gp\/product\/([A-Z0-9]{10})|([B0-9][A-Z0-9]{9})/i);
+    if (asinMatch) {
+      asin = (asinMatch[1] || asinMatch[2] || asinMatch[3]).toUpperCase();
+    } else {
+      asin = cleanInput.slice(0, 10).toUpperCase();
+    }
+
+    if (!asin || asin.length < 5) {
+      return { ok: false, error: "Não foi possível identificar um ASIN válido da Amazon na URL ou código informado." };
+    }
+
+    // 2. Buscar Tracking ID salvo ou usar o padrão oficial
+    const { data: credRow } = await supabaseAdmin
+      .from("integration_credentials")
+      .select("credentials")
+      .eq("user_id", context.userId)
+      .eq("kind", "marketplace")
+      .eq("provider", "amazon")
+      .maybeSingle();
+
+    const creds = (credRow?.credentials ?? {}) as Record<string, string>;
+    const trackingId = creds["tracking_id"]?.trim() || "achadinh07203-20";
+
+    const originalUrl = cleanInput.startsWith("http")
+      ? cleanInput.split("?")[0]
+      : `https://www.amazon.com.br/dp/${asin}`;
+
+    const affiliateUrl = `https://www.amazon.com.br/dp/${asin}?tag=${trackingId}`;
+
+    const discountPct =
+      previousPrice && previousPrice > price
+        ? Math.round(((previousPrice - price) / previousPrice) * 100)
+        : null;
+
+    const score = discountPct ? Math.min(discountPct * 1.5, 100) : 60;
+    const now = new Date().toISOString();
+
+    // 3. Upsert em products
+    const { data: prodData } = await context.supabase
+      .from("products")
+      .upsert(
+        {
+          user_id: context.userId,
+          marketplace: "amazon",
+          external_id: asin,
+          title: title.trim(),
+          image_url: imageUrl?.trim() || null,
+          url: originalUrl,
+          price,
+          rating: 5,
+          sales_count: 1,
+          updated_at: now,
+        },
+        { onConflict: "user_id,marketplace,external_id" as any },
+      )
+      .select("id")
+      .maybeSingle();
+
+    const productId = prodData?.id || null;
+
+    // 4. Salvar / Atualizar na tabela offers
+    const offerPayload: any = {
+      user_id: context.userId,
+      product_id: productId,
+      marketplace: "amazon",
+      external_product_id: asin,
+      title: title.trim(),
+      image_url: imageUrl?.trim() || null,
+      price,
+      previous_price: previousPrice || null,
+      discount_pct: discountPct || 0,
+      free_shipping: freeShipping ?? false,
+      available: true,
+      original_url: originalUrl,
+      affiliate_url: affiliateUrl,
+      affiliate_status: "resolved",
+      commission: null,
+      commission_pct: null,
+      score,
+      status: "approved",
+      source: "curated_catalog",
+      synced_at: now,
+      updated_at: now,
+    };
+
+    let savedOfferId = offerId;
+    if (offerId) {
+      await context.supabase
+        .from("offers")
+        .update(offerPayload)
+        .eq("id", offerId)
+        .eq("user_id", context.userId);
+    } else {
+      const { data: savedRow } = await context.supabase
+        .from("offers")
+        .upsert(offerPayload, { onConflict: "user_id,marketplace,title" as any })
+        .select("id")
+        .maybeSingle();
+      savedOfferId = savedRow?.id;
+    }
+
+    // 5. Salvar em affiliate_links
+    await context.supabase.from("affiliate_links").upsert(
+      {
+        user_id: context.userId,
+        marketplace: "amazon",
+        original_url: originalUrl,
+        affiliate_url: affiliateUrl,
+        affiliate_program: "Amazon Associados",
+        method: "tracking_id",
+        tracking_id: trackingId,
+        status: "resolved",
+        product_id: productId,
+      },
+      { onConflict: "user_id,marketplace,original_url" as any },
+    );
+
+    return {
+      ok: true,
+      asin,
+      originalUrl,
+      affiliateUrl,
+      offerId: savedOfferId,
+      message: `Produto "${title}" adicionado ao Catálogo Amazon com link de afiliado oficial (${trackingId})!`,
+    };
+  });
+
+/**
+ * Exclui um produto do catálogo Amazon
+ */
+export const deleteAmazonOfferFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { offerId: string }) =>
+    z.object({ offerId: z.string().min(1) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("offers")
+      .delete()
+      .eq("id", data.offerId)
+      .eq("user_id", context.userId);
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
+  });
+
+/**
+ * Importa o pacote de Top Achadinhos Oficiais da Amazon com imagens e ASINs reais
+ */
+export const seedAmazonCuratedOffersFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Buscar Tracking ID salvo
+    const { data: credRow } = await supabaseAdmin
+      .from("integration_credentials")
+      .select("credentials")
+      .eq("user_id", context.userId)
+      .eq("kind", "marketplace")
+      .eq("provider", "amazon")
+      .maybeSingle();
+
+    const creds = (credRow?.credentials ?? {}) as Record<string, string>;
+    const trackingId = creds["tracking_id"]?.trim() || "achadinh07203-20";
+
+    const CURATED_AMAZON_PRODUCTS = [
+      {
+        asin: "B09B8V1LZ3",
+        title: "Echo Dot 5ª Geração | Smart Speaker com Alexa e Som Imersivo - Cor Preta",
+        imageUrl: "https://m.media-amazon.com/images/I/71C3lbbeLsL._AC_SL1000_.jpg",
+        price: 429.0,
+        previousPrice: 479.0,
+        freeShipping: true,
+      },
+      {
+        asin: "B08C1LR9RC",
+        title: "Fire TV Stick com Controle Remoto por Voz com Alexa (inclui comandos de TV) | Streaming em Full HD",
+        imageUrl: "https://m.media-amazon.com/images/I/51Da2Z+Am0L._AC_SL1000_.jpg",
+        price: 299.0,
+        previousPrice: 379.0,
+        freeShipping: true,
+      },
+      {
+        asin: "B09SWW583J",
+        title: "Kindle 11ª Geração | Mais leve, tela de 6” de 300 ppi de alta resolução e 16 GB - Preto",
+        imageUrl: "https://m.media-amazon.com/images/I/71B1wkwpKgL._AC_SL1500_.jpg",
+        price: 499.0,
+        previousPrice: 549.0,
+        freeShipping: true,
+      },
+      {
+        asin: "B07J3G3R38",
+        title: "Fritadeira Sem Óleo Air Fryer Mondial Family 4 Litros AFN-40-FB - 1500W",
+        imageUrl: "https://m.media-amazon.com/images/I/71x4Fj9d1gL._AC_SL1500_.jpg",
+        price: 289.9,
+        previousPrice: 399.9,
+        freeShipping: true,
+      },
+      {
+        asin: "B0BWSGLL8N",
+        title: "Fone de Ouvido Bluetooth JBL Wave Buds TWS Intra-auricular com Microfone - Preto",
+        imageUrl: "https://m.media-amazon.com/images/I/51rYg1kF3YL._AC_SL1000_.jpg",
+        price: 249.0,
+        previousPrice: 299.0,
+        freeShipping: true,
+      },
+      {
+        asin: "B07ZDKF5G2",
+        title: "Robô Aspirador de Pó WAP ROBOT W100 Bivolt Automático 3 em 1 Varre, Aspira e Passa Pano",
+        imageUrl: "https://m.media-amazon.com/images/I/61NqK+UqFhL._AC_SL1000_.jpg",
+        price: 399.9,
+        previousPrice: 529.0,
+        freeShipping: true,
+      },
+    ];
+
+    const now = new Date().toISOString();
+    let imported = 0;
+
+    for (const item of CURATED_AMAZON_PRODUCTS) {
+      const originalUrl = `https://www.amazon.com.br/dp/${item.asin}`;
+      const affiliateUrl = `https://www.amazon.com.br/dp/${item.asin}?tag=${trackingId}`;
+      const discountPct = Math.round(((item.previousPrice - item.price) / item.previousPrice) * 100);
+      const score = Math.min(discountPct * 1.5, 100);
+
+      try {
+        const { data: prodData } = await context.supabase
+          .from("products")
+          .upsert(
+            {
+              user_id: context.userId,
+              marketplace: "amazon",
+              external_id: item.asin,
+              title: item.title,
+              image_url: item.imageUrl,
+              url: originalUrl,
+              price: item.price,
+              rating: 5,
+              sales_count: 1,
+              updated_at: now,
+            },
+            { onConflict: "user_id,marketplace,external_id" as any },
+          )
+          .select("id")
+          .maybeSingle();
+
+        await context.supabase.from("offers").upsert(
+          {
+            user_id: context.userId,
+            product_id: prodData?.id || null,
+            marketplace: "amazon",
+            external_product_id: item.asin,
+            title: item.title,
+            image_url: item.imageUrl,
+            price: item.price,
+            previous_price: item.previousPrice,
+            discount_pct: discountPct,
+            free_shipping: item.freeShipping,
+            available: true,
+            original_url: originalUrl,
+            affiliate_url: affiliateUrl,
+            affiliate_status: "resolved",
+            commission: null,
+            commission_pct: null,
+            score,
+            status: "approved",
+            source: "curated_top_picks",
+            synced_at: now,
+            updated_at: now,
+          },
+          { onConflict: "user_id,marketplace,title" as any },
+        );
+
+        await context.supabase.from("affiliate_links").upsert(
+          {
+            user_id: context.userId,
+            marketplace: "amazon",
+            original_url: originalUrl,
+            affiliate_url: affiliateUrl,
+            affiliate_program: "Amazon Associados",
+            method: "tracking_id",
+            tracking_id: trackingId,
+            status: "resolved",
+            product_id: prodData?.id || null,
+          },
+          { onConflict: "user_id,marketplace,original_url" as any },
+        );
+
+        imported++;
+      } catch {
+        // Continua os demais itens se um falhar
+      }
+    }
+
+    return {
+      ok: true,
+      imported,
+      total: CURATED_AMAZON_PRODUCTS.length,
+      trackingId,
+      message: `${imported} produtos oficiais da Amazon adicionados com sucesso ao seu catálogo com o Tracking ID ${trackingId}!`,
+    };
+  });
+
+
 

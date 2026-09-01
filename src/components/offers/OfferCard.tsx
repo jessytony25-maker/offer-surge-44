@@ -71,12 +71,14 @@ export function OfferCard({ offer }: { offer: RealOffer }) {
   // gere o link de afiliado no navegador com matt_word e matt_tool.
   // Para outros marketplaces com links encurtados/oficiais (ex: Shopee), usamos o affiliateUrl.
   const isMeli = offer.marketplace === "mercadolivre";
+  const isAmazon = offer.marketplace === "amazon";
   const hasAffiliate =
     Boolean(offer.affiliateUrl) && offer.affiliateUrl !== offer.originalUrl;
   const targetLink = isMeli
     ? (offer.originalUrl || offer.affiliateUrl || "#")
     : (offer.affiliateUrl || offer.originalUrl || "#");
   const affiliateStatus = hasAffiliate ? "active" : isMeli ? "same" : offer.affiliateUrl ? "same" : "missing";
+
 
 
   const message = generateCopy(
@@ -258,12 +260,21 @@ export function OfferCard({ offer }: { offer: RealOffer }) {
           variant="ghost"
           asChild
           className="h-8 px-2"
-          title={isMeli ? "Abrir no Mercado Livre (URL original para a extensão)" : hasAffiliate ? "Abrir link de afiliado" : "Abrir link original"}
+          title={
+            isMeli
+              ? "Abrir no Mercado Livre (URL original para a extensão)"
+              : isAmazon
+              ? "Abrir na Amazon (URL original do produto)"
+              : hasAffiliate
+              ? "Abrir link de afiliado"
+              : "Abrir link original"
+          }
         >
           <a href={targetLink} target="_blank" rel="noreferrer noopener">
             <ExternalLink className="size-3.5" />
           </a>
         </Button>
+
 
       </div>
     </article>
