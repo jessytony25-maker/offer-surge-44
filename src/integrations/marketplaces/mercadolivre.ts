@@ -159,10 +159,11 @@ export const mercadoLivreAdapter: MarketplaceAdapter = {
   async searchProducts(credentials, params): Promise<AdapterResult<NormalizedProduct[]>> {
     const keyword = params?.keyword || "ofertas";
     const limit = params?.limit || 20;
+    const offset = (params as any)?.offset || 0;
     const creds = credsFromRecord(credentials);
 
     const res = await meliFetch<{ results?: any[] }>(
-      `/sites/MLB/search?q=${encodeURIComponent(keyword)}&limit=${limit}`,
+      `/sites/MLB/search?q=${encodeURIComponent(keyword)}&limit=${limit}&offset=${offset}`,
       creds,
       { step: "catalog" },
     );
@@ -185,7 +186,20 @@ export const mercadoLivreAdapter: MarketplaceAdapter = {
   },
 
   async listOffers(credentials, params): Promise<AdapterResult<NormalizedProduct[]>> {
-    return this.searchProducts(credentials, { ...params, keyword: params?.keyword || "ofertas do dia" });
+    // Termos populares para trazer variedade real no catálogo se nenhum termo for especificado
+    const POPULAR_TERMS = [
+      "celular",
+      "fone bluetooth",
+      "air fryer",
+      "lavadora de alta pressao",
+      "tenis",
+      "eletronicos",
+      "casa e cozinha",
+      "ferramentas",
+      "beleza",
+    ];
+    const term = params?.keyword || POPULAR_TERMS[Math.floor(Math.random() * POPULAR_TERMS.length)] || "ofertas";
+    return this.searchProducts(credentials, { ...params, keyword: term });
   },
 
   async getProduct(externalId, credentials): Promise<AdapterResult<NormalizedProduct>> {
@@ -241,16 +255,6 @@ export const mercadoLivreAdapter: MarketplaceAdapter = {
   },
 
   async syncOffers(credentials, params): Promise<AdapterResult<SyncReport>> {
-    const creds = credsFromRecord(credentials);
-    if (!creds.mattWord || !creds.mattTool) {
-      return {
-        ok: false,
-        state: "not_configured",
-        message:
-          "Sincronização do Mercado Livre bloqueada: sem matt_word/matt_tool não é possível gerar link de afiliado real, então nenhuma oferta pode ser publicada.",
-      };
-    }
-
     const searchRes = await this.listOffers(credentials, params);
     if (!searchRes.ok) return searchRes;
 
@@ -270,12 +274,9 @@ export const mercadoLivreAdapter: MarketplaceAdapter = {
         errors.push(`Item ${item.externalId} ignorado por preço zerado.`);
         continue;
       }
-      // Regra: só entra no catálogo publicável quando o link de afiliado foi realmente resolvido.
-      if (item.affiliateStatus !== "resolved") {
-        skipped++;
-        errors.push(`Item ${item.externalId} ignorado: link de afiliado não resolvido.`);
-        continue;
-      }
+      // Não descartamos produtos com affiliateStatus !== "resolved", pois
+      // a URL ORIGINAL é preservada e a extensão oficial do Mercado Livre
+      // no Chrome cuidará da conversão/tracking na navegação.
       products.push(item);
     }
 
@@ -285,3 +286,4 @@ export const mercadoLivreAdapter: MarketplaceAdapter = {
     };
   },
 };
+

@@ -461,11 +461,16 @@ export const resolveProductByUrlFn = createServerFn({ method: "POST" })
  */
 export const searchMeliProductsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { keyword: string; limit?: number }) =>
-    z.object({ keyword: z.string().min(1).max(200), limit: z.number().int().min(1).max(50).optional() }).parse(input),
+  .validator((input: { keyword: string; limit?: number; offset?: number; saveToOffers?: boolean }) =>
+    z.object({
+      keyword: z.string().min(1).max(200),
+      limit: z.number().int().min(1).max(50).optional(),
+      offset: z.number().int().min(0).max(1000).optional(),
+      saveToOffers: z.boolean().optional(),
+    }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { keyword, limit = 20 } = data;
+    const { keyword, limit = 20, offset = 0, saveToOffers = true } = data;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { credsFromRecord, meliFetch, applyMattParams, validateAffiliateUrl } = await import("@/lib/mercadolivre.server");
 
@@ -481,8 +486,8 @@ export const searchMeliProductsFn = createServerFn({ method: "POST" })
     record["user_id"] = context.userId;
     const creds = credsFromRecord(record);
 
-    const searchRes = await meliFetch<{ results?: any[] }>(
-      `/sites/MLB/search?q=${encodeURIComponent(keyword)}&limit=${limit}`,
+    const searchRes = await meliFetch<{ results?: any[]; paging?: { total: number; offset: number; limit: number } }>(
+      `/sites/MLB/search?q=${encodeURIComponent(keyword)}&limit=${limit}&offset=${offset}`,
       creds,
       { step: "catalog_search" },
     );
@@ -491,20 +496,27 @@ export const searchMeliProductsFn = createServerFn({ method: "POST" })
       return { ok: false as const, error: searchRes.message, httpStatus: searchRes.httpStatus, endpoint: searchRes.endpoint };
     }
 
-    const results = (searchRes.data.results ?? []).map((item: any) => {
+    const now = new Date().toISOString();
+    const rawItems = searchRes.data.results ?? [];
+
+    const results = rawItems.map((item: any) => {
       const price = typeof item.price === "number" ? item.price : 0;
       const originalPrice = typeof item.original_price === "number" ? item.original_price : null;
       const discountPct = originalPrice && originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : null;
       const permalink = item.permalink || "";
       const affiliate = creds.mattWord && creds.mattTool ? applyMattParams(permalink, creds.mattWord, creds.mattTool) : null;
       const validAffiliate = affiliate && validateAffiliateUrl(affiliate, creds.mattWord!, creds.mattTool!) ? affiliate : null;
+      const imageUrl = (item.thumbnail || item.pictures?.[0]?.url || "").replace(/-I\.jpg$/i, "-O.jpg").replace(/^http:\/\//i, "https://") || null;
+
       return {
         externalId: String(item.id || ""),
         title: item.title || "Produto Mercado Livre",
-        imageUrl: (item.thumbnail || "").replace(/-I\.jpg$/i, "-O.jpg").replace(/^http:\/\//i, "https://") || null,
+        imageUrl,
         price,
         originalPrice,
         discountPct,
+        rating: item.reviews?.rating_average ? Number(item.reviews.rating_average) : null,
+        salesCount: typeof item.sold_quantity === "number" ? item.sold_quantity : null,
         originalUrl: permalink,
         affiliateUrl: validAffiliate,
         affiliateStatus: (validAffiliate ? "resolved" : "pending") as "resolved" | "pending",
@@ -512,5 +524,72 @@ export const searchMeliProductsFn = createServerFn({ method: "POST" })
       };
     });
 
-    return { ok: true as const, results, total: results.length };
-  });
+    // Se saveToOffers estiver ativo, persiste os itens na base de products e offers
+    if (saveToOffers && results.length > 0) {
+      for (const item of results) {
+        try {
+          const { data: prodData } = await context.supabase
+            .from("products")
+            .upsert(
+              {
+                user_id: context.userId,
+                marketplace: "mercadolivre",
+                external_id: item.externalId,
+                title: item.title,
+                image_url: item.imageUrl,
+                url: item.originalUrl,
+                price: item.price,
+                rating: item.rating,
+                sales_count: item.salesCount,
+                updated_at: now,
+              },
+              { onConflict: "user_id,marketplace,external_id" as any },
+            )
+            .select("id")
+            .maybeSingle();
+
+          await context.supabase.from("offers").upsert(
+            {
+              user_id: context.userId,
+              product_id: prodData?.id || null,
+              marketplace: "mercadolivre",
+              external_product_id: item.externalId,
+              title: item.title,
+              image_url: item.imageUrl,
+              price: item.price,
+              previous_price: item.originalPrice,
+              discount_pct: item.discountPct || 0,
+              rating: item.rating,
+              sales_count: item.salesCount,
+              original_url: item.originalUrl,
+              affiliate_url: item.affiliateUrl || item.originalUrl,
+              affiliate_status: item.affiliateStatus,
+              commission: null,
+              commission_pct: null,
+              free_shipping: item.freeShipping,
+              available: true,
+              score: item.discountPct ? Math.min(item.discountPct * 1.5, 100) : 50,
+              status: "new",
+              source: "catalog_search",
+              synced_at: now,
+              updated_at: now,
+            },
+            { onConflict: "user_id,marketplace,title" as any },
+          );
+        } catch {
+          // Continua processando os próximos itens se algum falhar
+        }
+      }
+    }
+
+    return {
+      ok: true as const,
+      results,
+      total: searchRes.data.paging?.total ?? results.length,
+      paging: {
+        total: searchRes.data.paging?.total ?? results.length,
+        offset,
+        limit,
+      },
+    };
+  });
